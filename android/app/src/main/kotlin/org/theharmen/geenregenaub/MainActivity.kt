@@ -9,6 +9,7 @@ import org.theharmen.geenregenaub.forecast.WeatherActivity
 import org.theharmen.geenregenaub.forecast.WeatherSummaryCard
 import org.theharmen.geenregenaub.home.HomeScreen
 import org.theharmen.geenregenaub.map.RadarMapActivity
+import org.theharmen.geenregenaub.map.RadarPreview
 import org.theharmen.geenregenaub.ui.theme.GeenRegenTheme
 import org.theharmen.geenregenaub.ui.theme.SystemBarsFollowTheme
 
@@ -23,6 +24,7 @@ class MainActivity : ComponentActivity() {
                     onOpenSettings = { startActivity(SettingsActivity.intent(this)) },
                     bottomContent = { WeatherSummaryCard(onOpen = { startActivity(WeatherActivity.intent(this)) }) },
                     onOpenMap = { startActivity(RadarMapActivity.intent(this)) },
+                    radarContent = { RadarPreview(onOpen = { startActivity(RadarMapActivity.intent(this)) }) },
                 )
             }
         }

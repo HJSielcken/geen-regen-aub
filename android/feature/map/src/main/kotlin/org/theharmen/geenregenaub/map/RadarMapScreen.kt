@@ -64,6 +64,9 @@ import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.android.style.sources.ImageSource
 import org.maplibre.geojson.Point
 import org.theharmen.geenregenaub.data.radar.RadarBounds
+import org.theharmen.geenregenaub.domain.RainForecast
+import org.theharmen.geenregenaub.domain.remainingAt
+import org.theharmen.geenregenaub.home.RainGraph
 import org.theharmen.geenregenaub.ui.theme.isAppInDarkTheme
 import java.time.Duration
 import java.time.Instant
@@ -97,6 +100,7 @@ fun RadarMapScreen(onBack: () -> Unit, viewModel: RadarMapViewModel = viewModel(
         Controls(
             state = state,
             onSelect = viewModel::select,
+            onSelectTime = viewModel::selectTime,
             onTogglePlay = viewModel::togglePlay,
             onRetry = viewModel::load,
             modifier = Modifier
@@ -108,7 +112,7 @@ fun RadarMapScreen(onBack: () -> Unit, viewModel: RadarMapViewModel = viewModel(
 }
 
 @Composable
-private fun RadarMap(state: RadarMapState, dark: Boolean, modifier: Modifier) {
+internal fun RadarMap(state: RadarMapState, dark: Boolean, modifier: Modifier, interactive: Boolean = true) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     var style by remember { mutableStateOf<Style?>(null) }
@@ -139,6 +143,7 @@ private fun RadarMap(state: RadarMapState, dark: Boolean, modifier: Modifier) {
         mapView.getMapAsync { map ->
             map.uiSettings.isRotateGesturesEnabled = false
             map.uiSettings.isTiltGesturesEnabled = false
+            if (!interactive) map.uiSettings.setAllGesturesEnabled(false)
             map.setMinZoomPreference(5.0)
             map.setMaxZoomPreference(12.0)
             style = null
@@ -165,7 +170,7 @@ private fun RadarMap(state: RadarMapState, dark: Boolean, modifier: Modifier) {
         mapView.getMapAsync { map ->
             val position = CameraPosition.Builder()
                 .target(if (place != null) LatLng(place.lat, place.lon) else LatLng(52.2, 5.3))
-                .zoom(if (place != null) 8.0 else 6.4)
+                .zoom(if (place != null) (if (interactive) 8.0 else 7.4) else 6.4)
                 .build()
             map.moveCamera(CameraUpdateFactory.newCameraPosition(position))
         }
@@ -214,6 +219,7 @@ private fun quad(b: RadarBounds) = LatLngQuad(
 private fun Controls(
     state: RadarMapState,
     onSelect: (Int) -> Unit,
+    onSelectTime: (Instant) -> Unit,
     onTogglePlay: () -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier,
@@ -269,6 +275,9 @@ private fun Controls(
                         modifier = Modifier.semantics { contentDescription = sliderLabel },
                     )
                     Legend(frames.legend.map { Color(it.argb) })
+                    state.forecast?.let { cached ->
+                        SyncedGraph(cached.forecast, frame.time, onSelectTime)
+                    }
                 }
             }
             Spacer(Modifier.height(6.dp))
@@ -281,8 +290,27 @@ private fun Controls(
     }
 }
 
+/** The home screen's 2-hour graph, its marker following the map frame. Sliding it moves the map. */
 @Composable
-private fun frameLabel(time: Instant, observed: Boolean, issuedAt: Instant): String {
+private fun SyncedGraph(forecast: RainForecast, frameTime: Instant, onSelectTime: (Instant) -> Unit) {
+    val upcoming = forecast.remainingAt(Instant.now()) ?: return
+    val stepSeconds = upcoming.step.seconds.coerceAtLeast(1)
+    val offset = Duration.between(upcoming.issuedAt, frameTime).seconds
+    val index = ((offset + stepSeconds / 2).floorDiv(stepSeconds)).toInt().takeIf { offset >= 0 && it in upcoming.intensities.indices }
+    Spacer(Modifier.height(8.dp))
+    RainGraph(
+        forecast = upcoming,
+        zone = ZoneId.systemDefault(),
+        summary = stringResource(R.string.map_graph_description),
+        graphHeight = 96.dp,
+        selectedIndex = index,
+        onSelect = { i -> if (i != null) onSelectTime(upcoming.timeOf(i)) },
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+@Composable
+internal fun frameLabel(time: Instant, observed: Boolean, issuedAt: Instant): String {
     val minutes = Duration.between(issuedAt, time).toMinutes().toInt()
     return when {
         observed && minutes == 0 -> stringResource(R.string.map_now)

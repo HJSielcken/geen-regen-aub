@@ -88,6 +88,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = viewModel(),
     /** Extra cards at the bottom of the screen, e.g. the weather forecast summary. */
     bottomContent: @Composable () -> Unit = {},
+    radarContent: @Composable () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val query by viewModel.searchQuery.collectAsStateWithLifecycle()
@@ -126,6 +127,7 @@ fun HomeScreen(
         onChooseFavorite = viewModel::choose,
         modifier = modifier,
         bottomContent = bottomContent,
+        radarContent = radarContent,
     )
 
     if (showPlaces) {
@@ -169,6 +171,7 @@ internal fun HomeContent(
     modifier: Modifier = Modifier,
     zone: ZoneId = ZoneId.systemDefault(),
     bottomContent: @Composable () -> Unit = {},
+    radarContent: @Composable () -> Unit = {},
 ) {
     Scaffold(modifier = modifier) { padding ->
         PullToRefreshBox(
@@ -203,6 +206,8 @@ internal fun HomeContent(
                 }
 
                 state.failure?.let { ErrorCard(it, onRefresh, onChoosePlace) }
+
+                radarContent()
 
                 if (forecast != null && needsPlace) {
                     PermissionCard(onRequestPermission, onChoosePlace)
@@ -405,21 +410,25 @@ private fun graphSummary(forecast: RainForecast, headline: String, detail: Strin
     }
 }
 
+/** Colour scale from drizzle to downpour, matching the graph's shading. */
 @Composable
 private fun Legend() {
-    Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-        LegendItem(GeenRegenColors.RainLight, "Licht")
-        LegendItem(GeenRegenColors.RainModerate, "Matig")
-        LegendItem(GeenRegenColors.RainHeavy, "Zwaar")
-    }
-}
-
-@Composable
-private fun LegendItem(color: Color, label: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        androidx.compose.foundation.Canvas(Modifier.size(10.dp)) { drawCircle(color) }
-        Spacer(Modifier.width(6.dp))
-        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    val label = MaterialTheme.colorScheme.onSurfaceVariant
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text("licht", style = MaterialTheme.typography.labelMedium, color = label)
+        androidx.compose.foundation.Canvas(
+            Modifier
+                .weight(1f)
+                .height(8.dp),
+        ) {
+            drawRoundRect(
+                brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                    listOf(GeenRegenColors.RainLight, GeenRegenColors.RainModerate, GeenRegenColors.RainHeavy),
+                ),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2, size.height / 2),
+            )
+        }
+        Text("zwaar", style = MaterialTheme.typography.labelMedium, color = label)
     }
 }
 

@@ -20,9 +20,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import org.theharmen.geenregenaub.data.CachedForecast
 import org.theharmen.geenregenaub.data.GeenRegenData
 import org.theharmen.geenregenaub.data.Place
 import org.theharmen.geenregenaub.data.radar.RadarFrames
+import java.time.Duration
+import java.time.Instant
 
 data class RadarMapState(
     val frames: RadarFrames? = null,
@@ -35,6 +38,8 @@ data class RadarMapState(
     val unavailable: Boolean = false,
     /** The place the home screen shows, for the pin and the first camera position. */
     val place: Place? = null,
+    /** The home screen's 2-hour forecast, shown as a graph under the map. */
+    val forecast: CachedForecast? = null,
 ) {
     val isReady: Boolean get() = frames != null && images.isNotEmpty()
 }
@@ -51,8 +56,9 @@ class RadarMapViewModel(application: Application) : AndroidViewModel(application
 
     init {
         viewModelScope.launch {
-            val place = runCatching { forecasts.latest()?.place }.getOrNull()
-            _state.update { it.copy(place = place) }
+            forecasts.cachedForecast.collect { cached ->
+                _state.update { it.copy(place = cached?.place, forecast = cached) }
+            }
         }
         load()
     }
@@ -95,6 +101,19 @@ class RadarMapViewModel(application: Application) : AndroidViewModel(application
     fun select(index: Int) {
         pause()
         _state.update { it.copy(index = index.coerceIn(0, (it.frames?.frames?.size ?: 1) - 1)) }
+    }
+
+    /** Jumps to the frame closest to [time], e.g. when sliding along the rain graph. */
+    fun selectTime(time: Instant) {
+        val frames = _state.value.frames?.frames ?: return
+        val index = frames.indices.minByOrNull { kotlin.math.abs(Duration.between(frames[it].time, time).seconds) }
+            ?: return
+        select(index)
+    }
+
+    /** Starts the animation once, for the home screen preview. */
+    fun autoplay() {
+        if (playJob?.isActive != true) play()
     }
 
     fun togglePlay() {
