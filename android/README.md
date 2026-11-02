@@ -12,9 +12,24 @@ Kotlin, Jetpack Compose with Material 3 (dynamic colour), a Glance home-screen w
 | `:core:data` | Relay client, DataStore forecast cache, coarse location, place search (PDOK); entry point `GeenRegenData` |
 | `:core:ui` | Theme and colours |
 | `:feature:home` | Home screen: verdict, 2-hour rain graph, place picker |
-| `:widget` | Glance widget and the refresh worker |
+| `:feature:alerts` | Rain alert settings screen, notification, settings storage |
+| `:widget` | Glance widget (verdict + 2-hour graph) and the 15-minute worker that refreshes, redraws and runs the alert check |
 
-Map, places and settings modules come with their milestones.
+Map and places modules come with their milestones.
+
+## Widget and rain alerts
+
+The widget reads the forecast cache from `:core:data` only; the worker refreshes it every ~15 minutes (and right
+away when the first widget is placed or a setting changes). At 2 rows or more it shows the bar
+graph, smaller sizes show just the verdict.
+
+Rain alerts are off by default. Turn them on in **Instellingen**: the gear on the home screen, a
+long-press on the app icon, or the gear on Android's app info page.
+Rules (in `:core:domain`, `RainAlertPolicy`): rain at or above the chosen intensity starting within
+the lead time (15–60 min) notifies once per shower, nothing during quiet hours (23:00–07:00) or
+from a forecast older than 30 minutes, and never from sample data (builds without a relay key show
+sample data labelled "Voorbeeldgegevens"). Because WorkManager runs about every 15 minutes, a warning
+can arrive up to ~15 minutes later than the lead time.
 
 ## Get the APK
 

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="nl">
+    <string name="alerts_channel_name">Regen op komst</string>
+    <string name="alerts_channel_description">Een melding kort voordat het bij jou gaat regenen</string>
+    <string name="alerts_test_title">Testmelding</string>
+    <string name="alerts_test_body">Zo ziet een regenmelding eruit.</string>
+
+    <string name="settings_title">Instellingen</string>
+    <string name="settings_section_alerts">Regenmeldingen</string>
+    <string name="settings_alerts_enabled">Waarschuw me als er regen aankomt</string>
+    <string name="settings_alerts_enabled_detail">De app kijkt ongeveer elk kwartier naar de verwachting voor jouw plek.</string>
+    <string name="settings_permission_needed">Sta meldingen toe om gewaarschuwd te worden.</string>
+    <string name="settings_permission_open">Meldingen toestaan</string>
+    <string name="settings_lead_time">Hoe lang van tevoren</string>
+    <string name="settings_lead_minutes">%1$d min</string>
+    <string name="settings_min_intensity">Vanaf welke regen</string>
+    <string name="settings_intensity_light">Alle regen</string>
+    <string name="settings_intensity_moderate">Matig en zwaarder</string>
+    <string name="settings_intensity_heavy">Alleen zware regen</string>
+    <string name="settings_quiet_hours">Niet storen in de nacht</string>
+    <string name="settings_quiet_hours_detail">Geen meldingen tussen 23:00 en 07:00</string>
+    <string name="settings_test">Stuur een testmelding</string>
+</resources>

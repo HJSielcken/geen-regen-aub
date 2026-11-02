@@ -3,5 +3,13 @@
     <string name="widget_name">Geen regen aub</string>
     <string name="widget_description">Regen in de komende 2 uur, in één oogopslag</string>
     <string name="widget_no_data">Nog geen regenverwachting</string>
+    <string name="widget_no_data_detail">Open de app om je plek te kiezen</string>
+    <string name="widget_stale">Verwachting verouderd</string>
+    <string name="widget_updated">%1$s</string>
+    <string name="widget_updated_stale">laatst %1$s</string>
     <string name="widget_attribution">KNMI</string>
+    <string name="widget_sample_data">Voorbeeldgegevens</string>
+    <string name="widget_axis_now">Nu</string>
+    <string name="widget_axis_one_hour">+1 uur</string>
+    <string name="widget_axis_two_hours">+2 uur</string>
 </resources>

@@ -28,4 +28,5 @@
     <string name="places_none">Niets gevonden</string>
     <string name="places_failed">Zoeken lukt nu niet. Controleer je verbinding.</string>
     <string name="places_source">Zoeken via PDOK Locatieserver</string>
+    <string name="home_settings">Instellingen</string>
 </resources>

@@ -24,6 +24,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -77,7 +78,11 @@ private val clock = DateTimeFormatter.ofPattern("HH:mm")
 
 /** The home screen: where am I, will it rain, and the two-hour graph. */
 @Composable
-fun HomeScreen(modifier: Modifier = Modifier, viewModel: HomeViewModel = viewModel()) {
+fun HomeScreen(
+    modifier: Modifier = Modifier,
+    onOpenSettings: (() -> Unit)? = null,
+    viewModel: HomeViewModel = viewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val query by viewModel.searchQuery.collectAsStateWithLifecycle()
     val results by viewModel.searchResults.collectAsStateWithLifecycle()
@@ -106,6 +111,7 @@ fun HomeScreen(modifier: Modifier = Modifier, viewModel: HomeViewModel = viewMod
         onRefresh = viewModel::refresh,
         onRequestPermission = { permissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION) },
         onChoosePlace = { showPlaces = true },
+        onOpenSettings = onOpenSettings,
         modifier = modifier,
     )
 
@@ -137,6 +143,7 @@ internal fun HomeContent(
     onRefresh: () -> Unit,
     onRequestPermission: () -> Unit,
     onChoosePlace: () -> Unit,
+    onOpenSettings: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     zone: ZoneId = ZoneId.systemDefault(),
 ) {
@@ -155,7 +162,7 @@ internal fun HomeContent(
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                Header(state, onChoosePlace)
+                Header(state, onChoosePlace, onOpenSettings)
 
                 val needsPlace = state.settings.useCurrentLocation && !hasPermission && state.settings.chosenPlace == null
                 if (needsPlace && state.forecast == null) {
@@ -187,7 +194,7 @@ internal fun HomeContent(
 }
 
 @Composable
-private fun Header(state: HomeUiState, onChoosePlace: () -> Unit) {
+private fun Header(state: HomeUiState, onChoosePlace: () -> Unit, onOpenSettings: (() -> Unit)?) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Text(
             text = stringResource(R.string.home_title),
@@ -217,6 +224,11 @@ private fun Header(state: HomeUiState, onChoosePlace: () -> Unit) {
                 Icon(painterResource(R.drawable.ic_expand), contentDescription = null, modifier = Modifier.size(18.dp))
             },
         )
+        if (onOpenSettings != null) {
+            IconButton(onClick = onOpenSettings) {
+                Icon(painterResource(R.drawable.ic_settings), contentDescription = stringResource(R.string.home_settings))
+            }
+        }
     }
 }
 
