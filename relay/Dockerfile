@@ -9,6 +9,8 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 COPY geenregen_relay ./geenregen_relay
+# Make the code readable for the non-root user, whatever the file modes in the checkout are.
+RUN chmod -R a+rX /app
 
 RUN useradd --system --uid 10001 relay
 USER relay
