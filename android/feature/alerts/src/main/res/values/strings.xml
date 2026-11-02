@@ -20,4 +20,12 @@
     <string name="settings_quiet_hours">Niet storen in de nacht</string>
     <string name="settings_quiet_hours_detail">Geen meldingen tussen 23:00 en 07:00</string>
     <string name="settings_test">Stuur een testmelding</string>
+
+    <string name="settings_section_appearance">Weergave</string>
+    <string name="settings_theme">Thema</string>
+    <string name="settings_theme_system">Systeem</string>
+    <string name="settings_theme_light">Licht</string>
+    <string name="settings_theme_dark">Donker</string>
+    <string name="settings_dynamic_color">Kleuren van je achtergrond</string>
+    <string name="settings_dynamic_color_detail">Uit: het eigen blauw van Geen regen aub</string>
 </resources>

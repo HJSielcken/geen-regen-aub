@@ -51,6 +51,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import org.theharmen.geenregenaub.domain.AlertSettings
 import org.theharmen.geenregenaub.domain.Intensity
+import org.theharmen.geenregenaub.ui.theme.AppearancePreferences
+import org.theharmen.geenregenaub.ui.theme.ThemeMode
+import org.theharmen.geenregenaub.ui.theme.rememberAppearance
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -176,7 +179,45 @@ fun SettingsScreen(
                 }
             }
 
+            AppearanceSection()
+
             Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+/** Licht / donker / systeem, and whether to take colours from the wallpaper. */
+@Composable
+private fun AppearanceSection() {
+    val context = LocalContext.current
+    val prefs = remember { AppearancePreferences(context) }
+    val appearance = rememberAppearance()
+    SectionCard(title = stringResource(R.string.settings_section_appearance)) {
+        Label(stringResource(R.string.settings_theme), enabled = true)
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            val options = listOf(
+                ThemeMode.SYSTEM to R.string.settings_theme_system,
+                ThemeMode.LIGHT to R.string.settings_theme_light,
+                ThemeMode.DARK to R.string.settings_theme_dark,
+            )
+            options.forEachIndexed { index, (mode, label) ->
+                SegmentedButton(
+                    selected = appearance.mode == mode,
+                    onClick = { prefs.appearance = appearance.copy(mode = mode) },
+                    shape = SegmentedButtonDefaults.itemShape(index, options.size),
+                ) {
+                    Text(stringResource(label))
+                }
+            }
+        }
+        if (AppearancePreferences.supportsDynamicColor) {
+            HorizontalDivider()
+            SwitchRow(
+                title = stringResource(R.string.settings_dynamic_color),
+                detail = stringResource(R.string.settings_dynamic_color_detail),
+                checked = appearance.dynamicColor,
+                onCheckedChange = { prefs.appearance = appearance.copy(dynamicColor = it) },
+            )
         }
     }
 }
