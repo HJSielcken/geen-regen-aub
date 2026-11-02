@@ -10,11 +10,13 @@ import hmac
 import logging
 import math
 from contextlib import asynccontextmanager
+from datetime import UTC
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Response
 
 from .config import Settings
-from .forecast import ForecastService, NoForecast
+from .forecast import KNMI_ATTRIBUTION, ForecastService, NoForecast
+from .frames import PALETTE, THRESHOLDS
 
 SECRET_HEADER = "X-Geenregen-Key"
 
@@ -38,7 +40,7 @@ def create_app(
         yield
         service.stop()
 
-    app = FastAPI(title="Geen regen aub relay", version="0.2.0", docs_url=None, redoc_url=None, lifespan=lifespan)
+    app = FastAPI(title="Geen regen aub relay", version="0.3.0", docs_url=None, redoc_url=None, lifespan=lifespan)
     app.state.forecast = service
 
     def require_secret(key: str | None = Header(default=None, alias=SECRET_HEADER)) -> None:
@@ -74,7 +76,41 @@ def create_app(
         response.headers["Cache-Control"] = f"max-age={answer.max_age}"
         return answer.body
 
+    @app.get("/v1/radar", dependencies=[Depends(require_secret)])
+    def radar(response: Response) -> dict:
+        """Frames for the animated radar map. The response shape is documented in docs/api.md."""
+        try:
+            radar, renderer, frames = service.map_frames()
+        except NoForecast as error:
+            raise HTTPException(status_code=503, detail=str(error)) from error
+        response.headers["Cache-Control"] = "max-age=60"
+        return {
+            "issued_at": _iso(radar.issued_at),
+            "bounds": renderer.bounds.as_dict(),
+            "width": renderer.width,
+            "height": renderer.height,
+            "interval_minutes": 5,
+            "frames": [{"time": _iso(f.time), "kind": f.kind, "url": f"/v1/radar/{f.id}.png"} for f in frames],
+            "legend": [
+                {"min_mm_per_hour": low, "color": "#{:02x}{:02x}{:02x}{:02x}".format(*rgba)}
+                for low, rgba in zip(THRESHOLDS, PALETTE[1:], strict=True)
+            ],
+            "attribution": KNMI_ATTRIBUTION,
+        }
+
+    @app.get("/v1/radar/{frame_id}.png", dependencies=[Depends(require_secret)])
+    def radar_frame(frame_id: str) -> Response:
+        frame = service.map_frame(frame_id)
+        if frame is None:
+            raise HTTPException(status_code=404, detail="Unknown or expired frame")
+        # A frame id names one issue and one time, so its picture never changes.
+        return Response(frame.png, media_type="image/png", headers={"Cache-Control": "max-age=86400, immutable"})
+
     return app
+
+
+def _iso(t) -> str:
+    return t.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def round_coord(value: float) -> float:

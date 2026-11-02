@@ -93,3 +93,12 @@ def test_healthz_shows_why_sources_fail():
     body = c.get("/healthz").json()
     assert body["last_knmi_error"] == "KNMI_API_KEY is not set"
     assert body["last_open_meteo_error"].endswith("down")
+
+
+def test_radar_requires_secret():
+    assert client().get("/v1/radar").status_code == 401
+
+
+def test_radar_unavailable_before_the_first_file():
+    response = client().get("/v1/radar", headers={SECRET_HEADER: "s3cret"})
+    assert response.status_code == 503
