@@ -12,6 +12,9 @@ import java.net.URLEncoder
 
 internal interface PlaceSearch {
     suspend fun search(query: String): List<Place>
+
+    /** The town at this point, e.g. "Utrecht", or null when unknown or offline. */
+    suspend fun townAt(lat: Double, lon: Double): String?
 }
 
 /**
@@ -19,23 +22,33 @@ internal interface PlaceSearch {
  * open geocoder (no key). https://api.pdok.nl/bzk/locatieserver/search/v3_1/ui/
  */
 internal class PdokPlaceSearch : PlaceSearch {
-    override suspend fun search(query: String): List<Place> = withContext(Dispatchers.IO) {
+    override suspend fun search(query: String): List<Place> {
         val q = URLEncoder.encode(query, "UTF-8")
         val fq = URLEncoder.encode("type:(woonplaats OR postcode OR adres)", "UTF-8")
-        val url = URL("$BASE?q=$q&fq=$fq&rows=8&fl=weergavenaam,type,centroide_ll")
-        val connection = url.openConnection() as HttpURLConnection
+        val body = get("$BASE/free?q=$q&fq=$fq&rows=8&fl=weergavenaam,type,centroide_ll") ?: return emptyList()
+        return parse(body)
+    }
+
+    override suspend fun townAt(lat: Double, lon: Double): String? {
+        // Reverse lookup of the nearest town (woonplaats); the phone's coarse fix is good enough.
+        val body = get("$BASE/reverse?lat=$lat&lon=$lon&type=woonplaats&rows=1&fl=weergavenaam,type") ?: return null
+        return parseTown(body)
+    }
+
+    private suspend fun get(url: String): String? = withContext(Dispatchers.IO) {
+        val connection = URL(url).openConnection() as HttpURLConnection
         try {
             connection.connectTimeout = 10_000
             connection.readTimeout = 10_000
-            if (connection.responseCode != HttpURLConnection.HTTP_OK) return@withContext emptyList()
-            parse(connection.inputStream.bufferedReader().use { it.readText() })
+            if (connection.responseCode != HttpURLConnection.HTTP_OK) return@withContext null
+            connection.inputStream.bufferedReader().use { it.readText() }
         } finally {
             connection.disconnect()
         }
     }
 
     companion object {
-        private const val BASE = "https://api.pdok.nl/bzk/locatieserver/search/v3_1/free"
+        private const val BASE = "https://api.pdok.nl/bzk/locatieserver/search/v3_1"
         private val json = Json { ignoreUnknownKeys = true }
         private val point = Regex("""POINT\(\s*(-?[0-9.]+)\s+(-?[0-9.]+)\s*\)""")
 
@@ -50,6 +63,11 @@ internal class PdokPlaceSearch : PlaceSearch {
             val weergavenaam: String,
             @SerialName("centroide_ll") val centroid: String? = null,
         )
+
+        /** Parses a reverse lookup: "Utrecht, Utrecht, Utrecht" becomes "Utrecht". */
+        internal fun parseTown(body: String): String? =
+            json.decodeFromString(Body.serializer(), body).response.docs.firstOrNull()
+                ?.weergavenaam?.substringBefore(',')?.trim()?.takeIf { it.isNotEmpty() }
 
         /** Parses a Locatieserver answer; `centroide_ll` is WKT "POINT(lon lat)". */
         internal fun parse(body: String): List<Place> =

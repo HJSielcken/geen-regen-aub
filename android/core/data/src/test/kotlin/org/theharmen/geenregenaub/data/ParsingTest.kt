@@ -100,4 +100,22 @@ class ParsingTest {
         assertTrue(a.isSameSpot(a.copy(name = "Thuis")))
         assertTrue(!a.isSameSpot(a.copy(lat = 52.1)))
     }
+
+    @Test
+    fun `parses a PDOK reverse lookup`() {
+        val body = """
+            {"response":{"numFound":1,"start":0,"maxScore":1.0,"docs":[
+              {"type":"woonplaats","weergavenaam":"Utrecht, Utrecht, Utrecht","id":"wpl-1","afstand":120.5}
+            ]}}
+        """.trimIndent()
+        assertEquals("Utrecht", PdokPlaceSearch.parseTown(body))
+        assertNull(PdokPlaceSearch.parseTown("""{"response":{"numFound":0,"docs":[]}}"""))
+    }
+
+    @Test
+    fun `nearby means within about a kilometre`() {
+        val utrecht = Place("Utrecht", 52.0907, 5.1214, isCurrentLocation = true)
+        assertTrue(DefaultForecastRepository.isNearby(utrecht, 52.095, 5.125))
+        assertTrue(!DefaultForecastRepository.isNearby(utrecht, 52.11, 5.1214))
+    }
 }

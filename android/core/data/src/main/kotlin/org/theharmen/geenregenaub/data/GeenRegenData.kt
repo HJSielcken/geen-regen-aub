@@ -12,6 +12,7 @@ object GeenRegenData {
     @Volatile private var store: ForecastStore? = null
     @Volatile private var forecasts: ForecastRepository? = null
     @Volatile private var places: PlaceRepository? = null
+    private val placeSearch by lazy { PdokPlaceSearch() }
 
     fun forecastRepository(context: Context): ForecastRepository =
         forecasts ?: synchronized(this) {
@@ -20,12 +21,13 @@ object GeenRegenData {
                 api = if (RelayConfig.isConfigured) RelayRainApi(RelayConfig.baseUrl, RelayConfig.secret) else DemoRainApi(),
                 isDemo = !RelayConfig.isConfigured,
                 location = CoarseLocationProvider(context.applicationContext),
+                placeSearch = placeSearch,
             ).also { forecasts = it }
         }
 
     fun placeRepository(context: Context): PlaceRepository =
         places ?: synchronized(this) {
-            places ?: DefaultPlaceRepository(store(context), PdokPlaceSearch()).also { places = it }
+            places ?: DefaultPlaceRepository(store(context), placeSearch).also { places = it }
         }
 
     private fun store(context: Context): ForecastStore =

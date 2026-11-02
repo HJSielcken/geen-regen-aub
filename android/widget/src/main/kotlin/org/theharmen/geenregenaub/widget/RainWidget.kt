@@ -184,7 +184,7 @@ internal data class WidgetState(
         fun of(data: CachedForecast?, now: Instant, zone: ZoneId, sampleLabel: String): WidgetState {
             if (data == null) return WidgetState(null, false, null, false, null, null, null)
             val updated = clock.format(data.fetchedAt.atZone(zone))
-            val placeName = data.place.name
+            val placeName = data.place.name.substringBefore(",").trim()
             val attribution = if (data.isDemo) sampleLabel else data.attribution
             val upcoming = data.forecast.remainingAt(now)
             val stale = data.forecast.isStale(now)

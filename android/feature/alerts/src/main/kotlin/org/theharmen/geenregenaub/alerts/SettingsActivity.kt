@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.mutableIntStateOf
 import org.theharmen.geenregenaub.ui.theme.GeenRegenTheme
+import org.theharmen.geenregenaub.ui.theme.SystemBarsFollowTheme
 
 /**
  * Settings for rain alerts and the widget. Reachable from the launcher shortcut, the gear in
@@ -21,6 +22,7 @@ class SettingsActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
+            SystemBarsFollowTheme(this)
             GeenRegenTheme {
                 SettingsScreen(
                     preferences = preferences,
