@@ -1,0 +1,16 @@
+[project]
+name = "geenregen-relay"
+version = "0.1.0"
+description = "Relay between the KNMI open data platform and the Geen regen aub app"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
