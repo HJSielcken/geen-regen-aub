@@ -1,18 +1,33 @@
+from datetime import timedelta
+
 from fastapi.testclient import TestClient
 
 from geenregen_relay.app import SECRET_HEADER, create_app, round_coord
 from geenregen_relay.config import Settings
+from geenregen_relay.forecast import ForecastService
+
+from .knmi_fixture import ISSUED
+from .test_forecast import FakeOpenMeteo
 
 
-def client(secret: str = "s3cret", key: str = "knmi") -> TestClient:
-    return TestClient(create_app(Settings(knmi_api_key=key, shared_secret=secret)))
+def client(secret: str = "s3cret", key: str = "knmi", open_meteo=None) -> TestClient:
+    settings = Settings(knmi_api_key=key, shared_secret=secret)
+    service = ForecastService(
+        settings, open_meteo=open_meteo or FakeOpenMeteo(), clock=lambda: ISSUED + timedelta(minutes=2)
+    )
+    return TestClient(create_app(settings, service=service, background=False))
 
 
 def test_healthz_is_open_and_reveals_no_secrets():
     response = client().get("/healthz")
     assert response.status_code == 200
     body = response.json()
-    assert body == {"status": "ok", "knmi_key_configured": True, "shared_secret_configured": True}
+    assert body == {
+        "status": "ok",
+        "knmi_key_configured": True,
+        "shared_secret_configured": True,
+        "knmi_issued_at": None,
+    }
     assert "s3cret" not in response.text
 
 
@@ -30,10 +45,34 @@ def test_rain_refuses_when_no_secret_configured():
     assert response.status_code == 503
 
 
-def test_rain_with_secret_reaches_endpoint():
+def test_rain_answers_with_the_contract_shape():
     response = client().get("/v1/rain", params={"lat": 52.0907, "lon": 5.1214}, headers={SECRET_HEADER: "s3cret"})
-    assert response.status_code == 501
-    assert response.json()["detail"]["point"] == {"lat": 52.09, "lon": 5.12}
+    assert response.status_code == 200
+    assert response.headers["Cache-Control"] == "max-age=60"
+    body = response.json()
+    assert body["point"] == {"lat": 52.09, "lon": 5.12}
+    assert set(body) == {
+        "point",
+        "source",
+        "issued_at",
+        "generated_at",
+        "interval_minutes",
+        "unit",
+        "series",
+        "summary",
+        "stale",
+        "attribution",
+    }
+    assert body["interval_minutes"] == 5 and body["unit"] == "mm/h"
+    assert len(body["series"]) == 25
+    assert set(body["summary"]) == {"raining_now", "rain_starts_at", "rain_ends_at", "max_mm_per_hour", "total_mm"}
+
+
+def test_rain_503_when_no_source_answers():
+    response = client(open_meteo=FakeOpenMeteo(fail=True)).get(
+        "/v1/rain", params={"lat": 52.1, "lon": 5.1}, headers={SECRET_HEADER: "s3cret"}
+    )
+    assert response.status_code == 503
 
 
 def test_rain_rejects_points_outside_the_netherlands():

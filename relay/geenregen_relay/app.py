@@ -7,23 +7,39 @@ is reachable on the public internet at https://geenregenaub.theharmen.org.
 from __future__ import annotations
 
 import hmac
+import logging
 import math
+from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Response
 
 from .config import Settings
+from .forecast import ForecastService, NoForecast
 
 SECRET_HEADER = "X-Geenregen-Key"
-ATTRIBUTION = "Radardata: KNMI, CC BY 4.0"
 
 # Rough bounding box of the KNMI radar forecast grid (Netherlands plus margin).
 NL_LAT = (49.3, 55.9)
 NL_LON = (0.0, 10.9)
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None, service: ForecastService | None = None, background: bool = True
+) -> FastAPI:
+    """`background=False` skips the KNMI poller thread (tests)."""
     settings = settings or Settings.from_env()
-    app = FastAPI(title="Geen regen aub relay", version="0.1.0", docs_url=None, redoc_url=None)
+    service = service or ForecastService(settings)
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
+        logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+        if background:
+            service.start()
+        yield
+        service.stop()
+
+    app = FastAPI(title="Geen regen aub relay", version="0.2.0", docs_url=None, redoc_url=None, lifespan=lifespan)
+    app.state.forecast = service
 
     def require_secret(key: str | None = Header(default=None, alias=SECRET_HEADER)) -> None:
         if not settings.shared_secret:
@@ -34,23 +50,27 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/healthz")
     def healthz() -> dict:
         """Open health check for Docker and Nginx Proxy Manager. Reveals no secrets."""
+        radar = service.radar
         return {
             "status": "ok",
             "knmi_key_configured": bool(settings.knmi_api_key),
             "shared_secret_configured": bool(settings.shared_secret),
+            "knmi_issued_at": None if radar is None else radar.issued_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
 
     @app.get("/v1/rain", dependencies=[Depends(require_secret)])
     def rain(
+        response: Response,
         lat: float = Query(ge=NL_LAT[0], le=NL_LAT[1]),
         lon: float = Query(ge=NL_LON[0], le=NL_LON[1]),
     ) -> dict:
-        """2-hour nowcast for a point. Decoding the KNMI files arrives in milestone 2."""
-        rounded = {"lat": round_coord(lat), "lon": round_coord(lon)}
-        raise HTTPException(
-            status_code=501,
-            detail={"message": "Not implemented yet (milestone 2)", "point": rounded, "attribution": ATTRIBUTION},
-        )
+        """2-hour nowcast for a point. The response shape is documented in docs/api.md."""
+        try:
+            answer = service.forecast(round_coord(lat), round_coord(lon))
+        except NoForecast as error:
+            raise HTTPException(status_code=503, detail=str(error)) from error
+        response.headers["Cache-Control"] = f"max-age={answer.max_age}"
+        return answer.body
 
     return app
 

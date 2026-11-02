@@ -9,9 +9,27 @@ BrooklynServer and is reachable at `https://geenregenaub.theharmen.org` through 
 | Endpoint | Auth | Purpose |
 | --- | --- | --- |
 | `GET /healthz` | none | Health check: whether the KNMI key and shared secret are configured (never their values) |
-| `GET /v1/rain?lat=&lon=` | `X-Geenregen-Key` header | 2-hour nowcast for a point. Returns 501 until milestone 2 |
+| `GET /v1/rain?lat=&lon=` | `X-Geenregen-Key` header | 2-hour nowcast for a point; the JSON contract is in [docs/api.md](../docs/api.md) |
 
 Coordinates are rounded to about 1 km and points outside the Netherlands are refused.
+
+## How it works
+
+- A background thread asks KNMI every minute (`KNMI_POLL_SECONDS`) for the newest `radar_forecast`
+  2.0 file. Only when its name changed does it download and decode it, so each file (one every
+  5 minutes) is fetched once, however many phones ask. That is about 84 KNMI requests an hour.
+- The decoder reads the grid, projection and calibration from the HDF5 file itself and answers each
+  request with 25 values (now to +2 hours, every 5 minutes) for the pixel holding the point.
+- If the newest KNMI forecast is older than 20 minutes (KNMI files arrive some minutes after their radar time), or the point is outside the radar image, the
+  relay asks Open-Meteo instead (cached per point for 5 minutes). If that fails too, it serves the
+  old KNMI forecast marked `"stale": true`, up to 2 hours old; after that it answers 503.
+- Run a single uvicorn worker (the default here): each worker would poll KNMI on its own.
+
+To check the key and the decoding on the server against a real file:
+
+```sh
+docker compose run --rm relay python -m geenregen_relay.check_knmi
+```
 
 ## Run on BrooklynServer
 
