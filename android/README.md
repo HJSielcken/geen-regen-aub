@@ -9,9 +9,9 @@ Kotlin, Jetpack Compose with Material 3 (dynamic colour), a Glance home-screen w
 | --- | --- |
 | `:app` | Activity, application class, schedules the background job |
 | `:core:domain` | Pure Kotlin: forecast model, intensity bands, Dutch verdict text (unit tested) |
-| `:core:data` | Relay settings; API client and cache arrive in milestones 2 and 3 |
+| `:core:data` | Relay client, DataStore forecast cache, coarse location, place search (PDOK); entry point `GeenRegenData` |
 | `:core:ui` | Theme and colours |
-| `:feature:home` | Home screen |
+| `:feature:home` | Home screen: verdict, 2-hour rain graph, place picker |
 | `:widget` | Glance widget and the refresh worker |
 
 Map, places and settings modules come with their milestones.

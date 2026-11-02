@@ -1,8 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools" tools:locale="nl">
     <string name="home_title">Geen regen aub</string>
+    <string name="home_loading">Regenradar ophalen…</string>
     <string name="home_no_data">Nog geen regenverwachting</string>
-    <string name="home_no_data_detail">De koppeling met de KNMI-radar komt in de volgende versie.</string>
-    <string name="home_relay_missing">Relay-sleutel ontbreekt in deze build.</string>
-    <string name="home_attribution">Radardata: KNMI, CC BY 4.0</string>
+    <string name="home_graph_title">Komende 2 uur</string>
+    <string name="home_updated">Bijgewerkt %1$s</string>
+    <string name="home_updated_ago">Bijgewerkt %1$d min geleden</string>
+    <string name="home_stale">De radar loopt achter: dit is de laatst bekende verwachting.</string>
+    <string name="home_demo">Voorbeelddata: deze build heeft geen relay-sleutel, dus dit is geen echte verwachting.</string>
+    <string name="home_choose_place">Kies plaats</string>
+
+    <string name="home_permission_title">Waar ben je?</string>
+    <string name="home_permission_body">Geef toegang tot je globale locatie voor de regen precies waar je bent, of kies een vaste plaats.</string>
+    <string name="home_permission_allow">Locatie toestaan</string>
+
+    <string name="error_no_location">Geen locatie gevonden. Kies een plaats om toch de verwachting te zien.</string>
+    <string name="error_outside_nl">Deze plek ligt buiten het bereik van de Nederlandse radar.</string>
+    <string name="error_unauthorized">De relay weigert de sleutel van deze build. Controleer GEENREGEN_RELAY_SECRET.</string>
+    <string name="error_relay">De relay heeft nog geen verwachting. Probeer het over een paar minuten opnieuw.</string>
+    <string name="error_network">Geen verbinding. Trek omlaag om het opnieuw te proberen.</string>
+    <string name="retry">Opnieuw</string>
+
+    <string name="places_title">Voor welke plek?</string>
+    <string name="places_current">Huidige locatie</string>
+    <string name="places_current_detail">Volgt je telefoon (globale locatie)</string>
+    <string name="places_search_hint">Zoek plaats, postcode of adres</string>
+    <string name="places_none">Niets gevonden</string>
+    <string name="places_failed">Zoeken lukt nu niet. Controleer je verbinding.</string>
+    <string name="places_source">Zoeken via PDOK Locatieserver</string>
 </resources>
