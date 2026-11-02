@@ -9,7 +9,7 @@ BrooklynServer and is reachable at `https://geenregenaub.theharmen.org` through 
 | Endpoint | Auth | Purpose |
 | --- | --- | --- |
 | `GET /healthz` | none | Health check: whether the KNMI key and shared secret are configured (never their values) |
-| `GET /v1/rain?lat=&lon=` | `X-Geenregen-Key` header | 2-hour nowcast for a point. Returns 501 until milestone 2 |
+| `GET /v1/rain?lat=&lon=` | `X-Geenregen-Key` header | 2-hour nowcast for a point; the JSON contract is in [docs/api.md](../docs/api.md) |
 
 Coordinates are rounded to about 1 km and points outside the Netherlands are refused.
 
