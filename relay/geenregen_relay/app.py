@@ -40,7 +40,7 @@ def create_app(
         yield
         service.stop()
 
-    app = FastAPI(title="Geen regen aub relay", version="0.3.0", docs_url=None, redoc_url=None, lifespan=lifespan)
+    app = FastAPI(title="Geen regen aub relay", version="0.3.1", docs_url=None, redoc_url=None, lifespan=lifespan)
     app.state.forecast = service
 
     def require_secret(key: str | None = Header(default=None, alias=SECRET_HEADER)) -> None:

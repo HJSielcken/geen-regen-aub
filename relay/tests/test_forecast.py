@@ -222,3 +222,13 @@ def test_unexpected_decode_error_is_recorded_not_raised(monkeypatch):
     monkeypatch.setattr("geenregen_relay.forecast.decode", boom)
     assert service.refresh() is False
     assert "KeyError" in service.last_knmi_error
+
+
+def test_a_misread_projection_is_reported_not_served(monkeypatch):
+    from geenregen_relay import radar as radar_module
+
+    monkeypatch.setattr(radar_module, "km_per_unit", lambda proj4: 0.001)
+    service = ForecastService(SETTINGS, knmi=FakeKnmi({"x": hdf5_bytes(grids())}).client())
+    assert service.refresh() is False
+    assert service.radar is None
+    assert "De Bilt" in service.last_knmi_error
