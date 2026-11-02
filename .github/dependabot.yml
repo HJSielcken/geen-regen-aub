@@ -1,0 +1,31 @@
+# Weekly pull requests that keep build tools, libraries and actions on their newest versions.
+version: 2
+updates:
+  - package-ecosystem: gradle
+    directory: /android
+    schedule:
+      interval: weekly
+    groups:
+      android:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: pip
+    directory: /relay
+    schedule:
+      interval: weekly
+    groups:
+      relay:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directory: /relay
+    schedule:
+      interval: weekly
