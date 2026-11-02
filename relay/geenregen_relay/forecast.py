@@ -106,6 +106,9 @@ class ForecastService:
         self._open_meteo = open_meteo or OpenMeteoClient(settings.open_meteo_url)
         self._radar: RadarForecast | None = None
         self._radar_fetched_at: datetime | None = None
+        # Last failure of each source, shown on /healthz to make problems on the server visible.
+        self.last_knmi_error: str | None = None if self._knmi else "KNMI_API_KEY is not set"
+        self.last_open_meteo_error: str | None = None
         self._lock = threading.Lock()
         self._om_cache: OrderedDict[tuple[float, float], tuple[datetime, list[tuple[datetime, float]]]] = OrderedDict()
         self._om_lock = threading.Lock()
@@ -133,7 +136,13 @@ class ForecastService:
                 forecast = decode(name, self._knmi.download(name))
             except (KnmiError, RadarFormatError, OSError) as error:
                 log.warning("KNMI refresh failed: %s", error)
+                self.last_knmi_error = f"{_iso(self._clock())} {error}"
                 return False
+            except Exception as error:  # an unexpected file layout must not kill the poller thread
+                log.exception("KNMI refresh failed unexpectedly")
+                self.last_knmi_error = f"{_iso(self._clock())} {type(error).__name__}: {error}"
+                return False
+            self.last_knmi_error = None
             self._radar = forecast
             self._radar_fetched_at = self._clock()
             log.info("Loaded %s (issued %s, %d steps)", name, _iso(forecast.issued_at), len(forecast.steps))
@@ -228,6 +237,7 @@ class ForecastService:
             return Answer(body, 60)
         except OpenMeteoError as error:
             log.warning("Open-Meteo fallback failed: %s", error)
+            self.last_open_meteo_error = f"{_iso(now)} {error}"
 
         if knmi is not None and now - knmi[0].issued_at <= TOO_OLD:
             radar, values = knmi

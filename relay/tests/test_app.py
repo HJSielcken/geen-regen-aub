@@ -27,6 +27,8 @@ def test_healthz_is_open_and_reveals_no_secrets():
         "knmi_key_configured": True,
         "shared_secret_configured": True,
         "knmi_issued_at": None,
+        "last_knmi_error": None,
+        "last_open_meteo_error": None,
     }
     assert "s3cret" not in response.text
 
@@ -83,3 +85,11 @@ def test_rain_rejects_points_outside_the_netherlands():
 def test_round_coord():
     assert round_coord(52.12345) == 52.12
     assert round_coord(4.995) == 5.0
+
+
+def test_healthz_shows_why_sources_fail():
+    c = client(key="", open_meteo=FakeOpenMeteo(fail=True))
+    assert c.get("/v1/rain", params={"lat": 52.1, "lon": 5.1}, headers={SECRET_HEADER: "s3cret"}).status_code == 503
+    body = c.get("/healthz").json()
+    assert body["last_knmi_error"] == "KNMI_API_KEY is not set"
+    assert body["last_open_meteo_error"].endswith("down")

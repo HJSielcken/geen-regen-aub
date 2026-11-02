@@ -211,3 +211,14 @@ def test_open_meteo_client_errors():
     )
     with pytest.raises(OpenMeteoError):
         client.slots(52.1, 5.2)
+
+
+def test_unexpected_decode_error_is_recorded_not_raised(monkeypatch):
+    service, _, _ = make()
+
+    def boom(name, content):
+        raise KeyError("image_datetime_valid")
+
+    monkeypatch.setattr("geenregen_relay.forecast.decode", boom)
+    assert service.refresh() is False
+    assert "KeyError" in service.last_knmi_error
