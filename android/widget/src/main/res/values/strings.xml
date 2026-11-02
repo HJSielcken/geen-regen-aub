@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="nl">
+    <string name="widget_name">Geen regen aub</string>
+    <string name="widget_description">Regen in de komende 2 uur, in één oogopslag</string>
+    <string name="widget_no_data">Nog geen regenverwachting</string>
+    <string name="widget_attribution">KNMI</string>
+</resources>

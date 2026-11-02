@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- cloud -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M38,66 L72,66 A10,10 0 0 0 72,46 A14,14 0 0 0 46,42 A12,12 0 0 0 38,66 Z" />
+    <!-- three rain drops, struck through: "geen regen" -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M44,71 l3,0 l-2,7 l-3,0 z M54,71 l3,0 l-2,7 l-3,0 z M64,71 l3,0 l-2,7 l-3,0 z" />
+    <path
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:pathData="M34,34 L74,82" />
+</vector>

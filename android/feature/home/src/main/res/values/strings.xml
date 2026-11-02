@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="nl">
+    <string name="home_title">Geen regen aub</string>
+    <string name="home_no_data">Nog geen regenverwachting</string>
+    <string name="home_no_data_detail">De koppeling met de KNMI-radar komt in de volgende versie.</string>
+    <string name="home_relay_missing">Relay-sleutel ontbreekt in deze build.</string>
+    <string name="home_attribution">Radardata: KNMI, CC BY 4.0</string>
+</resources>
