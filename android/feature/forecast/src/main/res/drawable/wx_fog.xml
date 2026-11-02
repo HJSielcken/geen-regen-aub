@@ -38,7 +38,7 @@
         android:strokeLineCap="round"
         android:strokeMiterLimit="10">
         <aapt:attr name="android:strokeColor">
-            <gradient android:type="linear" android:startX="None" android:startY="44.21" android:endX="None" android:endY="59.79">
+            <gradient android:type="linear" android:startX="27.5" android:startY="44.21" android:endX="36.5" android:endY="59.79">
                 <item android:offset="0" android:color="#FFD4D7DD"/>
                 <item android:offset="0.45" android:color="#FFD4D7DD"/>
                 <item android:offset="1" android:color="#FFBEC1C6"/>
