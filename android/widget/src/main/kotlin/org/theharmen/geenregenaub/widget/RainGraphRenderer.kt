@@ -3,25 +3,28 @@ package org.theharmen.geenregenaub.widget
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
-import android.graphics.RectF
+import android.graphics.LinearGradient
+import android.graphics.Path
+import android.graphics.Shader
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.createBitmap
 import org.theharmen.geenregenaub.domain.Intensity
 import org.theharmen.geenregenaub.domain.RainForecast
 import org.theharmen.geenregenaub.domain.RainScale
+import org.theharmen.geenregenaub.domain.SmoothCurve
 import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Draws the rain bars for the widget into a bitmap. Glance has no canvas, and a bitmap keeps
- * the graph smooth at any widget size. Bar shade follows intensity: light rain is a soft
+ * Draws the rain curve for the widget into a bitmap. Glance has no canvas, and a bitmap keeps
+ * the graph sharp at any widget size. The shade follows intensity: light rain is a soft
  * tint of [rainColor], heavy rain is the full colour.
  */
 internal object RainGraphRenderer {
     /** RemoteViews bitmaps travel over IPC; keep them well under the limit. */
     private const val MAX_WIDTH_PX = 1000
     private const val MAX_HEIGHT_PX = 400
-    private const val BARS = 24
+    private const val POINTS = 25
 
     fun render(
         forecast: RainForecast,
@@ -52,24 +55,52 @@ internal object RainGraphRenderer {
             canvas.drawLine(0f, y, w.toFloat(), y, grid)
         }
 
-        val values = forecast.intensities.take(BARS)
-        val slot = w.toFloat() / BARS
-        val gap = min(slot * 0.25f, 3f * d)
-        val radius = min((slot - gap) / 2f, 4f * d)
-        val minBar = 3f * d
-        val bar = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
-        val rect = RectF()
-        values.forEachIndexed { i, mm ->
-            val intensity = Intensity.of(mm) ?: return@forEachIndexed
-            val fraction = RainScale.fraction(mm)
-            val barHeight = max(minBar, fraction * chartBottom)
-            bar.color = shade(rainColor, intensity)
-            val left = i * slot + gap / 2f
-            rect.set(left, chartBottom - barHeight, left + slot - gap, chartBottom + radius)
-            canvas.save()
-            canvas.clipRect(0f, 0f, w.toFloat(), chartBottom)
-            canvas.drawRoundRect(rect, radius, radius, bar)
-            canvas.restore()
+        // Smooth area through one point per 5 minutes; dry steps sit on the baseline.
+        val values = forecast.intensities.take(POINTS)
+        if (values.size >= 2 && values.any { Intensity.of(it) != null }) {
+            val step = w.toFloat() / (values.size - 1)
+            val xs = FloatArray(values.size) { it * step }
+            val ys = FloatArray(values.size) { i ->
+                val mm = values[i]
+                if (Intensity.of(mm) == null) chartBottom else chartBottom - RainScale.fraction(mm) * chartBottom
+            }
+            val line = Path().apply {
+                moveTo(xs[0], ys[0])
+                for (seg in SmoothCurve.segments(xs, ys)) cubicTo(seg.c1x, seg.c1y, seg.c2x, seg.c2y, seg.x, seg.y)
+            }
+            val area = Path(line).apply {
+                lineTo(xs.last(), chartBottom)
+                lineTo(xs.first(), chartBottom)
+                close()
+            }
+            // Shade follows height: a soft tint for drizzle, the full colour for a downpour.
+            val heavyY = chartBottom - RainScale.fraction(Intensity.HEAVY.minMmPerHour) * chartBottom
+            val moderateY = chartBottom - RainScale.fraction(Intensity.MODERATE.minMmPerHour) * chartBottom
+            val shader = LinearGradient(
+                0f, 0f, 0f, chartBottom,
+                intArrayOf(
+                    shade(rainColor, Intensity.HEAVY),
+                    shade(rainColor, Intensity.HEAVY),
+                    shade(rainColor, Intensity.MODERATE),
+                    shade(rainColor, Intensity.LIGHT),
+                ),
+                floatArrayOf(0f, heavyY / chartBottom, moderateY / chartBottom, 1f),
+                Shader.TileMode.CLAMP,
+            )
+            val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.FILL
+                this.shader = shader
+                alpha = 170
+            }
+            val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.STROKE
+                strokeWidth = max(1.5f, 2f * d)
+                strokeCap = Paint.Cap.ROUND
+                strokeJoin = Paint.Join.ROUND
+                this.shader = shader
+            }
+            canvas.drawPath(area, fill)
+            canvas.drawPath(line, stroke)
         }
 
         val base = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = gridColor; style = Paint.Style.FILL }
