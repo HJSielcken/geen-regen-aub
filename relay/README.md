@@ -64,6 +64,11 @@ The relay URL is public, so every `/v1` request must carry `X-Geenregen-Key: <RE
 Give the app the same value at build time (see [android/README.md](../android/README.md)).
 Without a configured secret the relay refuses all `/v1` requests.
 
+## Error reports
+
+Set `SENTRY_DSN` in `.env` to the DSN of the Sentry project `theharmen/geen-regen-aub-relay` and
+restart the container. Errors and failed requests then show up in Sentry; empty turns it off.
+
 ## Develop
 
 ```sh

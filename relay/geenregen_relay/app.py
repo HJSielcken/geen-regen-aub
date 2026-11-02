@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 from datetime import UTC
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Response
+from fastapi.middleware.gzip import GZipMiddleware
 
 from .config import Settings
 from .forecast import KNMI_ATTRIBUTION, ForecastService, NoForecast
@@ -42,6 +43,8 @@ def create_app(
 
     app = FastAPI(title="Geen regen aub relay", version="0.3.0", docs_url=None, redoc_url=None, lifespan=lifespan)
     app.state.forecast = service
+    # The JSON answers shrink to about a fifth; the app's HTTP client unpacks them transparently.
+    app.add_middleware(GZipMiddleware, minimum_size=1000)
 
     def require_secret(key: str | None = Header(default=None, alias=SECRET_HEADER)) -> None:
         if not settings.shared_secret:

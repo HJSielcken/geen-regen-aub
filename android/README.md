@@ -44,6 +44,35 @@ On a pull request the workflow posts a comment with a direct link to the APK. Ot
 the run under the repo's Actions tab and download the `geen-regen-aub-apk` artifact. Unzip it
 and install the APK on your phone (allow installs from your browser or file manager).
 
+## Releases
+
+Push a tag such as `v1.0.0` and the **Release** workflow builds a signed, minified release APK
+and publishes it as a GitHub Release (`geen-regen-aub-1.0.0.apk`). The version name comes from
+the tag. Running the workflow by hand from the Actions tab builds the same APK as an artifact
+without publishing anything, which is a quick way to check the R8 build.
+
+Every CI build, debug or release, gets a version code of minutes since 2026-01-01, so whichever
+APK is newer installs over the older one.
+
+## Size
+
+Release builds run R8 (code shrinking, obfuscation, optimisation) and resource shrinking, with
+keep rules in `app/proguard-rules.pro`. MapLibre's native library is most of the APK, so only
+the `arm64-v8a` copy is packed (all phones of the last years). For an x86 emulator or an old
+32-bit phone, build with `-Pgeenregen.allAbis=true`. Only Dutch and English resources are kept.
+
+## Crash reports (Sentry)
+
+Crashes go to the Sentry project `theharmen/geen-regen-aub` (EU region). The app only starts
+Sentry when the build has a DSN, and sends no personal data. Repository secrets:
+
+| Secret | Value |
+| --- | --- |
+| `SENTRY_DSN` | The project's DSN (Sentry → Project settings → Client Keys) |
+| `SENTRY_AUTH_TOKEN` | An organization auth token, so release builds upload the R8 mapping and stack traces stay readable |
+
+Locally, use `geenregen.sentryDsn` and `geenregen.sentryAuthToken` in `local.properties`.
+
 ## Signing
 
 Every build is signed with the same key, so a new APK installs over the old one. CI reads the key
