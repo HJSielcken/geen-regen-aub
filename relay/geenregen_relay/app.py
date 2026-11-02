@@ -41,7 +41,7 @@ def create_app(
         yield
         service.stop()
 
-    app = FastAPI(title="Geen regen aub relay", version="0.3.0", docs_url=None, redoc_url=None, lifespan=lifespan)
+    app = FastAPI(title="Geen regen aub relay", version="0.3.1", docs_url=None, redoc_url=None, lifespan=lifespan)
     app.state.forecast = service
     # The JSON answers shrink to about a fifth; the app's HTTP client unpacks them transparently.
     app.add_middleware(GZipMiddleware, minimum_size=1000)

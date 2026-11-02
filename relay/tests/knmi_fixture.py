@@ -8,7 +8,10 @@ from datetime import UTC, datetime, timedelta
 import h5py
 import numpy as np
 
-PROJ4 = "+proj=stere +lat_0=90 +lon_0=0 +lat_ts=60 +a=6378.137 +b=6356.752 +x_0=0 +y_0=0"
+# As in current KNMI files: ellipsoid in metres, projected coordinates in km.
+PROJ4 = "+proj=stere +lat_0=90 +lon_0=0 +lat_ts=60 +a=6378137 +b=6356752 +x_0=0 +y_0=0 +units=km"
+# Older KNMI files gave the ellipsoid itself in km.
+LEGACY_PROJ4 = "+proj=stere +lat_0=90 +lon_0=0 +lat_ts=60 +a=6378.137 +b=6356.752 +x_0=0 +y_0=0"
 ROWS, COLUMNS = 765, 700
 MISSING = 65535
 ISSUED = datetime(2026, 11, 2, 21, 0, tzinfo=UTC)
