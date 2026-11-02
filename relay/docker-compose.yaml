@@ -1,5 +1,5 @@
 # Run on BrooklynServer with:  docker compose up -d --build
-# Nginx Proxy Manager forwards https://geenregenaub.theharmen.org to this container on port 8080.
+# Nginx Proxy Manager forwards https://geenregenaub.theharmen.org to this container (server port 8093).
 services:
   relay:
     build: .
@@ -10,6 +10,6 @@ services:
     restart: unless-stopped
     env_file: .env
     ports:
-      # Change the left side if 8080 is taken on the server. If Nginx Proxy Manager runs in
+      # 8093 on the server -> 8080 in the container. If Nginx Proxy Manager runs in
       # Docker on the same network, you can drop this and use http://geenregen-relay:8080.
-      - "8080:8080"
+      - "8093:8080"

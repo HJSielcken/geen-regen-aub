@@ -22,7 +22,7 @@ cp .env.example .env
 # fill in KNMI_API_KEY (see ../docs/knmi-api-key.md) and a shared secret:
 openssl rand -hex 32    # paste the output after RELAY_SHARED_SECRET=
 docker compose up -d --build
-curl http://localhost:8080/healthz
+curl http://localhost:8093/healthz
 ```
 
 Update later with `git pull && docker compose up -d --build`.
@@ -33,7 +33,7 @@ Add a proxy host (needed from milestone 2, harmless now):
 
 - Domain: `geenregenaub.theharmen.org` (with a DNS record pointing at your server)
 - Scheme `http`, forward host: the server's LAN IP (or `geenregen-relay` if NPM shares a Docker
-  network with the container), forward port `8080`
+  network with the container), forward port `8093` (or `8080` when forwarding to `geenregen-relay` over a shared Docker network)
 - SSL tab: request a Let's Encrypt certificate, enable Force SSL and HTTP/2
 
 Then `curl https://geenregenaub.theharmen.org/healthz` should answer `{"status":"ok",...}`.
