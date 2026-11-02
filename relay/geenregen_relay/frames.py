@@ -11,7 +11,6 @@ no imaging library is needed.
 
 from __future__ import annotations
 
-import math
 import struct
 import zlib
 from dataclasses import dataclass
@@ -19,7 +18,7 @@ from dataclasses import dataclass
 import numpy as np
 from pyproj import Proj
 
-from .radar import Grid, Step
+from .radar import Grid, Step, km_per_unit
 
 EARTH_RADIUS = 6378137.0
 
@@ -67,7 +66,7 @@ class FrameRenderer:
 
     def __init__(self, grid: Grid, width: int | None = None):
         proj = Proj(grid.proj4)
-        axis = 0.001 if "+a=" in grid.proj4 and _axis(grid.proj4) > 100_000 else 1.0
+        axis = km_per_unit(grid.proj4)
 
         # The grid's outline in lon/lat, sampled along all four edges.
         cols = np.arange(grid.columns + 1, dtype=float)
@@ -111,13 +110,6 @@ class FrameRenderer:
 
     def png(self, step: Step) -> bytes:
         return encode_png(self.classes(step))
-
-
-def _axis(proj4: str) -> float:
-    for part in proj4.split():
-        if part.startswith("+a="):
-            return float(part[3:])
-    return math.inf
 
 
 def _chunk(kind: bytes, data: bytes) -> bytes:

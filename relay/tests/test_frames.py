@@ -3,6 +3,7 @@ import zlib
 from datetime import timedelta
 
 import numpy as np
+import pytest
 
 from geenregen_relay.forecast import ForecastService
 from geenregen_relay.frames import PALETTE, FrameRenderer, encode_png
@@ -51,7 +52,9 @@ def test_frames_cover_the_netherlands_and_put_rain_in_the_right_place():
     radar = service.radar
     renderer = FrameRenderer(radar.grid)
     b = renderer.bounds
-    assert b.south < 50.7 and b.north > 53.6 and b.west < 3.3 and b.east > 7.3
+    # geo_product_corners of a real KNMI file: 48.895..55.974 N, 0..10.856 E
+    assert b.north == pytest.approx(55.974, abs=0.01) and b.south == pytest.approx(48.895, abs=0.01)
+    assert b.west == pytest.approx(0.0, abs=0.01) and b.east == pytest.approx(10.856, abs=0.01)
 
     # Raw 10 = 0.1 mm per 5 min = 1.2 mm/h; it shows up around De Bilt only.
     classes = renderer.classes(radar.steps[2])

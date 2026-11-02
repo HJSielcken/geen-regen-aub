@@ -36,6 +36,8 @@ OPEN_METEO_TTL = timedelta(minutes=5)
 OPEN_METEO_CACHE_SIZE = 2048
 # How far back the radar map shows observed rain.
 MAP_HISTORY = timedelta(hours=1)
+# De Bilt: every KNMI grid must cover it, else the file's projection was read wrongly.
+SANITY_POINT = (52.10, 5.18)
 
 
 class NoForecast(RuntimeError):
@@ -155,6 +157,8 @@ class ForecastService:
                 if self._radar is not None and self._radar.filename == name:
                     return False
                 forecast = decode(name, self._knmi.download(name))
+                if forecast.grid.pixel(*SANITY_POINT) is None:
+                    raise RadarFormatError(f"{name}: De Bilt falls outside the grid, the projection is misread")
             except (KnmiError, RadarFormatError, OSError) as error:
                 log.warning("KNMI refresh failed: %s", error)
                 self.last_knmi_error = f"{_iso(self._clock())} {error}"

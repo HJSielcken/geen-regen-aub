@@ -49,6 +49,20 @@ def parse_knmi_time(value) -> datetime:
     raise RadarFormatError(f"Unknown KNMI time format: {text!r}")
 
 
+def km_per_unit(proj4: str) -> float:
+    """Kilometres per projected unit of `proj4`, so coordinates match KNMI's pixel sizes in km.
+
+    Current KNMI files say `+a=6378137 ... +units=km`: metres for the ellipsoid, km out of proj.
+    Older ones gave the ellipsoid itself in km (`+a=6378.137`) without `+units`. Otherwise proj
+    works in metres.
+    """
+    units = re.search(r"\+units=(\S+)", proj4)
+    if units:
+        return {"km": 1.0, "m": 0.001}.get(units.group(1), 0.001)
+    axis = re.search(r"\+a=([0-9.eE+-]+)", proj4)
+    return 0.001 if axis is None or float(axis.group(1)) > 100_000 else 1.0
+
+
 @dataclass(frozen=True)
 class Grid:
     """Maps lat/lon to a pixel of the KNMI grid."""
@@ -62,11 +76,8 @@ class Grid:
     row_offset: float
 
     def __post_init__(self):
-        # KNMI gives the ellipsoid in km (+a=6378.137), so projected coordinates are km, like the
-        # pixel sizes. Proj is used directly: a datum transformation would refuse a "planet" that small.
         object.__setattr__(self, "_proj", Proj(self.proj4))
-        axis = re.search(r"\+a=([0-9.eE+-]+)", self.proj4)
-        object.__setattr__(self, "_to_km", 0.001 if axis and float(axis.group(1)) > 100_000 else 1.0)
+        object.__setattr__(self, "_to_km", km_per_unit(self.proj4))
 
     def pixel(self, lat: float, lon: float) -> tuple[int, int] | None:
         """(row, column) of the pixel holding this point, or None if it is outside the grid."""
