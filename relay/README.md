@@ -10,6 +10,8 @@ BrooklynServer and is reachable at `https://geenregenaub.theharmen.org` through 
 | --- | --- | --- |
 | `GET /healthz` | none | Health check: whether the KNMI key and shared secret are configured (never their values) |
 | `GET /v1/rain?lat=&lon=` | `X-Geenregen-Key` header | 2-hour nowcast for a point; the JSON contract is in [docs/api.md](../docs/api.md) |
+| `GET /v1/radar` | `X-Geenregen-Key` header | Animated radar map frames: the past hour measured plus the 2-hour forecast, as transparent PNGs |
+| `GET /v1/radar/{id}.png` | `X-Geenregen-Key` header | One map frame |
 
 Coordinates are rounded to about 1 km and points outside the Netherlands are refused.
 

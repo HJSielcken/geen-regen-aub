@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from .config import Settings
+from .frames import FrameRenderer
 from .knmi import KnmiClient, KnmiError
 from .openmeteo import ATTRIBUTION as OPEN_METEO_ATTRIBUTION
 from .openmeteo import OpenMeteoClient, OpenMeteoError, resample
@@ -33,10 +34,25 @@ STALE_AFTER = timedelta(minutes=20)
 TOO_OLD = timedelta(hours=2)
 OPEN_METEO_TTL = timedelta(minutes=5)
 OPEN_METEO_CACHE_SIZE = 2048
+# How far back the radar map shows observed rain.
+MAP_HISTORY = timedelta(hours=1)
 
 
 class NoForecast(RuntimeError):
     pass
+
+
+@dataclass(frozen=True)
+class MapFrame:
+    id: str
+    time: datetime
+    kind: str  # "observed" or "forecast"
+    png: bytes
+
+
+def _frame_id(issued: datetime, time: datetime) -> str:
+    """Unique per issue and time, so a frame's PNG never changes and can be cached for long."""
+    return f"{issued.astimezone(UTC):%Y%m%d%H%M}-{time.astimezone(UTC):%Y%m%d%H%M}"
 
 
 @dataclass(frozen=True)
@@ -114,6 +130,11 @@ class ForecastService:
         self._om_lock = threading.Lock()
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
+        # Radar map: the current forecast's frames, plus the observed (+0) frame of each earlier file.
+        self._renderer: FrameRenderer | None = None
+        self._renderer_grid = None
+        self._forecast_frames: list[MapFrame] = []
+        self._observed_frames: OrderedDict[datetime, MapFrame] = OrderedDict()
 
     # --- KNMI -------------------------------------------------------------------------------
 
@@ -145,8 +166,48 @@ class ForecastService:
             self.last_knmi_error = None
             self._radar = forecast
             self._radar_fetched_at = self._clock()
+            try:
+                self._render_frames(forecast)
+            except Exception:  # the map is extra; never let it break the rain answer
+                log.exception("Rendering radar map frames failed")
             log.info("Loaded %s (issued %s, %d steps)", name, _iso(forecast.issued_at), len(forecast.steps))
             return True
+
+    def _render_frames(self, forecast: RadarForecast) -> None:
+        if self._renderer is None or self._renderer_grid != forecast.grid:
+            self._renderer = FrameRenderer(forecast.grid)
+            self._renderer_grid = forecast.grid
+            self._observed_frames.clear()
+        issued = forecast.issued_at
+        frames = [
+            MapFrame(
+                id=_frame_id(issued, step.time),
+                time=step.time,
+                kind="observed" if index == 0 else "forecast",
+                png=self._renderer.png(step),
+            )
+            for index, step in enumerate(forecast.steps)
+        ]
+        self._forecast_frames = frames
+        self._observed_frames[issued] = frames[0]
+        for old in [t for t in self._observed_frames if issued - t > MAP_HISTORY]:
+            del self._observed_frames[old]
+
+    def map_frames(self) -> tuple[RadarForecast, FrameRenderer, list[MapFrame]]:
+        """Observed frames of the past hour, then the current forecast. Raises NoForecast."""
+        radar, renderer, current = self._radar, self._renderer, self._forecast_frames
+        if radar is None or renderer is None or not current:
+            raise NoForecast("No KNMI radar frames yet")
+        if self._clock() - radar.issued_at > TOO_OLD:
+            raise NoForecast("The KNMI radar frames are too old")
+        past = [f for t, f in list(self._observed_frames.items()) if t < radar.issued_at]
+        return radar, renderer, past + current
+
+    def map_frame(self, frame_id: str) -> MapFrame | None:
+        for frame in list(self._observed_frames.values()) + self._forecast_frames:
+            if frame.id == frame_id:
+                return frame
+        return None
 
     def start(self) -> None:
         if self._thread is not None or self._knmi is None:

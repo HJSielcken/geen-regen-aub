@@ -101,6 +101,43 @@ Error bodies are FastAPI's shape: `{"detail": ...}`. The app should key on the s
 | 503 | Relay not configured, or neither KNMI nor Open-Meteo answered and nothing is cached | Retry later (back off, at least 1 minute). |
 | 5xx other | Relay bug or proxy trouble | Retry later. |
 
+## `GET /v1/radar`
+
+Frames for the animated radar map: the past hour as measured (the +0 frame of each earlier KNMI
+file the relay saw) and then the current 2-hour forecast, oldest first.
+
+### 200 OK
+
+```json
+{
+  "issued_at": "2026-11-02T21:00:00Z",
+  "bounds": { "north": 55.97357, "south": 48.89527, "east": 10.85645, "west": 0.0 },
+  "width": 700,
+  "height": 751,
+  "interval_minutes": 5,
+  "frames": [
+    { "time": "2026-11-02T20:55:00Z", "kind": "observed", "url": "/v1/radar/202611022055-202611022055.png" },
+    { "time": "2026-11-02T21:00:00Z", "kind": "observed", "url": "/v1/radar/202611022100-202611022100.png" },
+    { "time": "2026-11-02T21:05:00Z", "kind": "forecast", "url": "/v1/radar/202611022100-202611022105.png" }
+  ],
+  "legend": [ { "min_mm_per_hour": 0.1, "color": "#8db8f596" } ],
+  "attribution": "Radardata: KNMI, CC BY 4.0"
+}
+```
+
+- Each frame is a transparent PNG in **Web Mercator**, to be stretched linearly between `bounds`
+  (top-left = north/west, bottom-right = south/east), e.g. a MapLibre `ImageSource`.
+- `kind` is `observed` for measured rain (the past hour and the current +0 step), `forecast` after.
+- `legend` lists the colour classes from light to heavy; `color` is `#rrggbbaa`.
+- `Cache-Control: max-age=60`. 503 when there is no KNMI file yet or the newest is over 2 hours old
+  (the map has no Open-Meteo fallback).
+
+## `GET /v1/radar/{id}.png`
+
+One frame from the list above (use its `url`). A frame id names one KNMI file and one time, so the
+picture never changes: `Cache-Control: max-age=86400, immutable`. 404 once it has expired (frames
+older than an hour are dropped).
+
 ## `GET /healthz`
 
 No authentication. Returns `{"status": "ok", ...}` with booleans about the configuration, never

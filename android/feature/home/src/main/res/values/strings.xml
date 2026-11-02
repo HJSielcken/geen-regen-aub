@@ -29,6 +29,7 @@
     <string name="places_failed">Zoeken lukt nu niet. Controleer je verbinding.</string>
     <string name="places_source">Zoeken via PDOK Locatieserver</string>
     <string name="home_settings">Instellingen</string>
+    <string name="home_map">Radarkaart</string>
     <string name="places_saved">Bewaarde plekken</string>
     <string name="places_save">Bewaar</string>
     <string name="places_save_title">Plek bewaren</string>

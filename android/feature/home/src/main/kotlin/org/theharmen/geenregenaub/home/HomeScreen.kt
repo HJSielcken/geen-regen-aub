@@ -84,6 +84,7 @@ private val clock = DateTimeFormatter.ofPattern("HH:mm")
 fun HomeScreen(
     modifier: Modifier = Modifier,
     onOpenSettings: (() -> Unit)? = null,
+    onOpenMap: (() -> Unit)? = null,
     viewModel: HomeViewModel = viewModel(),
     /** Extra cards at the bottom of the screen, e.g. the weather forecast summary. */
     bottomContent: @Composable () -> Unit = {},
@@ -117,6 +118,7 @@ fun HomeScreen(
         onRequestPermission = { permissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION) },
         onChoosePlace = { showPlaces = true },
         onOpenSettings = onOpenSettings,
+        onOpenMap = onOpenMap,
         onUseCurrentLocation = {
             viewModel.useCurrentLocation()
             if (!hasPermission) permissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
@@ -161,6 +163,7 @@ internal fun HomeContent(
     onRequestPermission: () -> Unit,
     onChoosePlace: () -> Unit,
     onOpenSettings: (() -> Unit)? = null,
+    onOpenMap: (() -> Unit)? = null,
     onUseCurrentLocation: () -> Unit = {},
     onChooseFavorite: (Place) -> Unit = {},
     modifier: Modifier = Modifier,
@@ -182,7 +185,7 @@ internal fun HomeContent(
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                Header(state, onChoosePlace, onOpenSettings)
+                Header(state, onChoosePlace, onOpenSettings, onOpenMap)
                 if (state.favorites.isNotEmpty()) {
                     FavoriteChips(state, onUseCurrentLocation, onChooseFavorite)
                 }
@@ -219,7 +222,12 @@ internal fun HomeContent(
 }
 
 @Composable
-private fun Header(state: HomeUiState, onChoosePlace: () -> Unit, onOpenSettings: (() -> Unit)?) {
+private fun Header(
+    state: HomeUiState,
+    onChoosePlace: () -> Unit,
+    onOpenSettings: (() -> Unit)?,
+    onOpenMap: (() -> Unit)?,
+) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Text(
             text = stringResource(R.string.home_title),
@@ -249,6 +257,11 @@ private fun Header(state: HomeUiState, onChoosePlace: () -> Unit, onOpenSettings
                 Icon(painterResource(R.drawable.ic_expand), contentDescription = null, modifier = Modifier.size(18.dp))
             },
         )
+        if (onOpenMap != null) {
+            IconButton(onClick = onOpenMap) {
+                Icon(painterResource(R.drawable.ic_map), contentDescription = stringResource(R.string.home_map))
+            }
+        }
         if (onOpenSettings != null) {
             IconButton(onClick = onOpenSettings) {
                 Icon(painterResource(R.drawable.ic_settings), contentDescription = stringResource(R.string.home_settings))
