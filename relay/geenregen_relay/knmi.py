@@ -37,7 +37,10 @@ class KnmiClient:
         return f"{s.knmi_base_url}/datasets/{s.knmi_dataset}/versions/{s.knmi_dataset_version}"
 
     def _get(self, url: str, params: dict | None = None) -> dict:
-        response = self._client.get(url, params=params, headers={"Authorization": self._settings.knmi_api_key})
+        try:
+            response = self._client.get(url, params=params, headers={"Authorization": self._settings.knmi_api_key})
+        except httpx.HTTPError as error:
+            raise KnmiError(f"KNMI request failed: {error}") from error
         if response.status_code in (401, 403):
             raise KnmiError(f"KNMI rejected the API key (HTTP {response.status_code})")
         if response.status_code == 429:
@@ -61,3 +64,14 @@ class KnmiClient:
         """A short-lived URL to download one file."""
         data = self._get(f"{self._dataset_url}/files/{filename}/url")
         return data["temporaryDownloadUrl"]
+
+    def download(self, filename: str) -> bytes:
+        """The file's content. The temporary URL is pre-signed, so it gets no Authorization header."""
+        url = self.download_url(filename)
+        try:
+            response = self._client.get(url, timeout=60.0)
+        except httpx.HTTPError as error:
+            raise KnmiError(f"Downloading {filename} failed: {error}") from error
+        if response.is_error:
+            raise KnmiError(f"Downloading {filename} failed: HTTP {response.status_code}")
+        return response.content
