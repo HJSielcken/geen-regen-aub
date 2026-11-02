@@ -16,4 +16,7 @@
     <string name="map_retry">Opnieuw</string>
     <string name="map_attribution">Radardata: KNMI, CC BY 4.0 · Kaart: Kadaster / PDOK</string>
     <string name="map_time_slider">Tijdstip van het radarbeeld</string>
+    <string name="map_graph_description">Regen de komende 2 uur op jouw plek</string>
+    <string name="map_preview_title">Radar</string>
+    <string name="map_preview_open">Open de radarkaart</string>
 </resources>

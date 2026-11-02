@@ -40,4 +40,23 @@ class SmoothCurveTest {
         assertEquals(1, SmoothCurve.nearestIndex(5.1f, 240f, 25))
         assertEquals(24, SmoothCurve.nearestIndex(500f, 240f, 25))
     }
+
+    @Test
+    fun `soften tapers a step but keeps the peak height`() {
+        val step = FloatArray(25) { if (it in 7..18) 10f else 0f }
+        val soft = SmoothCurve.soften(step)
+        assertEquals(10f, soft.max(), 1e-4f)
+        // Fades in over the steps around the edge instead of jumping from 0 to 10.
+        assertTrue(soft[6] > 0f && soft[6] < 5f)
+        assertTrue(soft[7] > soft[6] && soft[7] < 10f)
+        // Far from the shower it stays dry.
+        assertEquals(0f, soft[0], 0f)
+        assertEquals(0f, soft[24], 0f)
+    }
+
+    @Test
+    fun `soften leaves a dry row dry`() {
+        val dry = FloatArray(25)
+        assertTrue(SmoothCurve.soften(dry).all { it == 0f })
+    }
 }

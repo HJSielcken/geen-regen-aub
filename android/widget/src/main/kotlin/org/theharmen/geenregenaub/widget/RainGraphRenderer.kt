@@ -60,10 +60,12 @@ internal object RainGraphRenderer {
         if (values.size >= 2 && values.any { Intensity.of(it) != null }) {
             val step = w.toFloat() / (values.size - 1)
             val xs = FloatArray(values.size) { it * step }
-            val ys = FloatArray(values.size) { i ->
+            val heights = FloatArray(values.size) { i ->
                 val mm = values[i]
-                if (Intensity.of(mm) == null) chartBottom else chartBottom - RainScale.fraction(mm) * chartBottom
+                if (Intensity.of(mm) == null) 0f else RainScale.fraction(mm) * chartBottom
             }
+            val soft = SmoothCurve.soften(heights)
+            val ys = FloatArray(values.size) { i -> chartBottom - soft[i] }
             val line = Path().apply {
                 moveTo(xs[0], ys[0])
                 for (seg in SmoothCurve.segments(xs, ys)) cubicTo(seg.c1x, seg.c1y, seg.c2x, seg.c2y, seg.x, seg.y)
