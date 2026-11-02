@@ -28,6 +28,11 @@ KNMI Open Data API ──(API key)──> relay (BrooklynServer, Docker)
 - Radar nowcast: [KNMI radar_forecast 2.0](https://dataplatform.knmi.nl/dataset/radar-forecast-2-0),
   CC BY 4.0. The app shows "Radardata: KNMI, CC BY 4.0" wherever the data appears.
 - Fallback: [Open-Meteo](https://open-meteo.com/), CC BY 4.0, free non-commercial tier.
+- Weather forecast (temperature, sky, wind; hour by hour and day by day): [Open-Meteo](https://open-meteo.com/),
+  CC BY 4.0, fetched straight from the phone (coordinates rounded to ~1 km). The relay is not involved.
+- Weather icons: [Meteocons](https://github.com/basmilius/weather-icons) by Bas Milius, MIT licence,
+  converted to Android vector drawables. The licence text ships in the app
+  (`android/feature/forecast/src/main/res/raw/meteocons_license.txt`) and opens from the weather screen.
 
 ## Status
 

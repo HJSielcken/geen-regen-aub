@@ -12,4 +12,12 @@
     <string name="widget_axis_now">Nu</string>
     <string name="widget_axis_one_hour">+1 uur</string>
     <string name="widget_axis_two_hours">+2 uur</string>
+
+    <string name="forecast_widget_name">Weerbericht</string>
+    <string name="forecast_widget_description">Temperatuur en weer per uur en per dag</string>
+    <string name="forecast_widget_no_data">Nog geen weerbericht</string>
+    <string name="forecast_widget_no_data_detail">Open de app om je plek te kiezen</string>
+    <string name="forecast_widget_now">Nu</string>
+    <string name="forecast_widget_today">Vandaag</string>
+    <string name="forecast_widget_tomorrow">Morgen</string>
 </resources>

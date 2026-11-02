@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="nl">
+    <string name="weather_title">Weerbericht</string>
+    <string name="weather_back">Terug</string>
+    <string name="weather_loading">Weerbericht ophalen…</string>
+    <string name="weather_now">Nu</string>
+    <string name="weather_today">Vandaag</string>
+    <string name="weather_tomorrow">Morgen</string>
+    <string name="weather_hours_title">Komende 24 uur</string>
+    <string name="weather_days_title">Komende dagen</string>
+    <string name="weather_feels_like">Voelt als %1$s</string>
+    <string name="weather_max_min">max %1$s · min %2$s</string>
+    <string name="weather_wind">Wind</string>
+    <string name="weather_gusts">Windstoten</string>
+    <string name="weather_humidity">Vochtigheid</string>
+    <string name="weather_sun">Zon op / onder</string>
+    <string name="weather_rain_chance">Kans op neerslag</string>
+    <string name="weather_rain_amount">Neerslag</string>
+    <string name="weather_uv">UV-index</string>
+    <string name="weather_updated">Bijgewerkt %1$s</string>
+    <string name="weather_open">Bekijk het weerbericht</string>
+    <string name="weather_summary_hint">Uur voor uur en de komende dagen</string>
+    <string name="weather_error_no_location">Kies eerst een plaats of geef toegang tot je locatie op het hoofdscherm.</string>
+    <string name="weather_error_network">Het weerbericht kan nu niet worden opgehaald. Trek omlaag om het opnieuw te proberen.</string>
+    <string name="weather_retry">Opnieuw</string>
+    <string name="weather_icons_credit">Iconen: Meteocons door Bas Milius (MIT-licentie)</string>
+    <string name="weather_licence_title">Meteocons</string>
+    <string name="weather_close">Sluiten</string>
+    <string name="weather_expand_day">Details voor %1$s</string>
+</resources>

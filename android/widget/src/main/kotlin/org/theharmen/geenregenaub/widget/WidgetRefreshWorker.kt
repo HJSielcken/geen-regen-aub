@@ -16,6 +16,7 @@ import org.theharmen.geenregenaub.alerts.RainAlertNotifier
 import org.theharmen.geenregenaub.data.CachedForecast
 import org.theharmen.geenregenaub.data.GeenRegenData
 import org.theharmen.geenregenaub.data.RefreshResult
+import org.theharmen.geenregenaub.data.weather.WeatherData
 import org.theharmen.geenregenaub.domain.AlertDecision
 import org.theharmen.geenregenaub.domain.RainAlertPolicy
 import java.time.Instant
@@ -23,7 +24,7 @@ import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 
 /**
- * The 15-minute background job: fetch the forecast into the cache, redraw the widget, then
+ * The 15-minute background job: fetch the forecast into the cache, redraw the widgets, then
  * decide whether to send a "rain coming" notification.
  */
 class WidgetRefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
@@ -37,6 +38,11 @@ class WidgetRefreshWorker(context: Context, params: WorkerParameters) : Coroutin
         }
 
         RainWidget().updateAll(context)
+
+        // The weather forecast follows the place the rain fetch just resolved; it only fetches
+        // when its cache is older than half an hour, so most runs cost nothing.
+        runCatching { WeatherData.repository(context).refresh() }
+        runCatching { ForecastWidget().updateAll(context) }
 
         // Sample data (a build without a relay key) never triggers a real-looking alert.
         if (data != null && !data.isDemo) checkAlert(context, data)

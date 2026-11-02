@@ -5,6 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import org.theharmen.geenregenaub.alerts.SettingsActivity
+import org.theharmen.geenregenaub.forecast.WeatherActivity
+import org.theharmen.geenregenaub.forecast.WeatherSummaryCard
 import org.theharmen.geenregenaub.home.HomeScreen
 import org.theharmen.geenregenaub.ui.theme.GeenRegenTheme
 import org.theharmen.geenregenaub.ui.theme.SystemBarsFollowTheme
@@ -16,7 +18,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             SystemBarsFollowTheme(this)
             GeenRegenTheme {
-                HomeScreen(onOpenSettings = { startActivity(SettingsActivity.intent(this)) })
+                HomeScreen(
+                    onOpenSettings = { startActivity(SettingsActivity.intent(this)) },
+                    bottomContent = { WeatherSummaryCard(onOpen = { startActivity(WeatherActivity.intent(this)) }) },
+                )
             }
         }
     }
