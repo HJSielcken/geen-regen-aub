@@ -3,7 +3,9 @@
 services:
   relay:
     build: .
-    image: geenregen-relay:latest
+    image: geenregen-relay:local
+    # Always build from this folder; never try to pull the image from a registry.
+    pull_policy: build
     container_name: geenregen-relay
     restart: unless-stopped
     env_file: .env
