@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Meteocons by Bas Milius (MIT), https://github.com/basmilius/weather-icons -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+    <path
+        android:pathData="M 32,21.5 A 10.5,10.5 0 1,0 32,42.5 A 10.5,10.5 0 1,0 32,21.5 z"
+        android:strokeColor="#FFF8AF18"
+        android:strokeWidth="0.5"
+        android:strokeMiterLimit="10">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="26.75" android:startY="22.91" android:endX="37.25" android:endY="41.09">
+                <item android:offset="0" android:color="#FFFBBF24"/>
+                <item android:offset="0.45" android:color="#FFFBBF24"/>
+                <item android:offset="1" android:color="#FFF59E0B"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:pathData="M 32,15.71 V 9.5 m 0,45 V 48.29 M 43.52,20.48 l 4.39,-4.39 M 16.09,47.91 l 4.39,-4.39 m 0,-23 l -4.39,-4.39 M 47.91,47.91 l -4.39,-4.39 M 15.71,32 H 9.5 m 45,0 H 48.29"
+        android:strokeColor="#FFFBBF24"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeMiterLimit="10"/>
+</vector>

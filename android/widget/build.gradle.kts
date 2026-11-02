@@ -25,6 +25,7 @@ dependencies {
     implementation(project(":core:domain"))
     implementation(project(":core:data"))
     implementation(project(":feature:alerts"))
+    implementation(project(":feature:forecast"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)

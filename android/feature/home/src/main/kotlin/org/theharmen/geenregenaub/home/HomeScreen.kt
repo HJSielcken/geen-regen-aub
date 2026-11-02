@@ -82,6 +82,8 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     onOpenSettings: (() -> Unit)? = null,
     viewModel: HomeViewModel = viewModel(),
+    /** Extra cards at the bottom of the screen, e.g. the weather forecast summary. */
+    bottomContent: @Composable () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val query by viewModel.searchQuery.collectAsStateWithLifecycle()
@@ -113,6 +115,7 @@ fun HomeScreen(
         onChoosePlace = { showPlaces = true },
         onOpenSettings = onOpenSettings,
         modifier = modifier,
+        bottomContent = bottomContent,
     )
 
     if (showPlaces) {
@@ -146,6 +149,7 @@ internal fun HomeContent(
     onOpenSettings: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     zone: ZoneId = ZoneId.systemDefault(),
+    bottomContent: @Composable () -> Unit = {},
 ) {
     Scaffold(modifier = modifier) { padding ->
         PullToRefreshBox(
@@ -181,6 +185,8 @@ internal fun HomeContent(
                 if (forecast != null && needsPlace) {
                     PermissionCard(onRequestPermission, onChoosePlace)
                 }
+
+                bottomContent()
 
                 Spacer(Modifier.height(8.dp))
                 Text(

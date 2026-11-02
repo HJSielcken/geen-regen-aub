@@ -13,7 +13,8 @@ Kotlin, Jetpack Compose with Material 3 (dynamic colour), a Glance home-screen w
 | `:core:ui` | Theme and colours |
 | `:feature:home` | Home screen: verdict, 2-hour rain graph, place picker |
 | `:feature:alerts` | Rain alert settings screen, notification, settings storage |
-| `:widget` | Glance widget (verdict + 2-hour graph) and the 15-minute worker that refreshes, redraws and runs the alert check |
+| `:feature:forecast` | Weather forecast screen (now, 24 hours, 10 days), the home screen weather card, Meteocons icons |
+| `:widget` | Glance widgets (rain: verdict + 2-hour graph; weather: now, hours, days) and the 15-minute worker that refreshes, redraws and runs the alert check |
 
 Map and places modules come with their milestones.
 
@@ -22,6 +23,11 @@ Map and places modules come with their milestones.
 The widget reads the forecast cache from `:core:data` only; the worker refreshes it every ~15 minutes (and right
 away when the first widget is placed or a setting changes). At 2 rows or more it shows the bar
 graph, smaller sizes show just the verdict.
+
+The weather widget ("Weerbericht") grows with its size: just the weather now at 1 row, the next
+hours from 2 rows, and the coming days below that. The weather forecast comes straight from
+Open-Meteo and follows the same place as the rain forecast; the worker only fetches it when the
+cached one is older than 30 minutes.
 
 Rain alerts are off by default. Turn them on in **Instellingen**: the gear on the home screen, a
 long-press on the app icon, or the gear on Android's app info page.
