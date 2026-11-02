@@ -23,6 +23,8 @@ android {
 
 dependencies {
     implementation(project(":core:domain"))
+    implementation(project(":feature:alerts"))
+    implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
     implementation(libs.androidx.work.runtime.ktx)

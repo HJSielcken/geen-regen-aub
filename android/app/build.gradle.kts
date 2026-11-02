@@ -78,6 +78,7 @@ dependencies {
     implementation(project(":core:data"))
     implementation(project(":core:ui"))
     implementation(project(":feature:home"))
+    implementation(project(":feature:alerts"))
     implementation(project(":widget"))
 
     implementation(libs.androidx.core.ktx)
