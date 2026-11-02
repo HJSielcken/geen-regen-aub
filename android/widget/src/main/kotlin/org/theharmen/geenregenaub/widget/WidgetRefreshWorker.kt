@@ -13,6 +13,9 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import org.theharmen.geenregenaub.alerts.AlertPreferences
 import org.theharmen.geenregenaub.alerts.RainAlertNotifier
+import org.theharmen.geenregenaub.data.CachedForecast
+import org.theharmen.geenregenaub.data.GeenRegenData
+import org.theharmen.geenregenaub.data.RefreshResult
 import org.theharmen.geenregenaub.domain.AlertDecision
 import org.theharmen.geenregenaub.domain.RainAlertPolicy
 import java.time.Instant
@@ -26,17 +29,21 @@ import java.util.concurrent.TimeUnit
 class WidgetRefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val context = applicationContext
-        val provider = WidgetDependencies.provider(context)
-        val fresh = runCatching { provider.refresh(context) }.getOrNull()
-        val data = fresh ?: provider.latest(context)
+        val repository = GeenRegenData.forecastRepository(context)
+        val data = when (val result = runCatching { repository.refresh() }.getOrNull()) {
+            is RefreshResult.Success -> result.forecast
+            is RefreshResult.Failure -> result.cached
+            null -> runCatching { repository.latest() }.getOrNull()
+        }
 
         RainWidget().updateAll(context)
 
-        if (data != null) checkAlert(context, data)
+        // Sample data (a build without a relay key) never triggers a real-looking alert.
+        if (data != null && !data.isDemo) checkAlert(context, data)
         return Result.success()
     }
 
-    private fun checkAlert(context: Context, data: WidgetForecast) {
+    private fun checkAlert(context: Context, data: CachedForecast) {
         val preferences = AlertPreferences(context)
         val decision = RainAlertPolicy.decide(
             forecast = data.forecast,

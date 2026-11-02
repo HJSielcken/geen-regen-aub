@@ -9,7 +9,7 @@ import java.time.Instant
 
 /**
  * Alert settings and the background check's memory, in plain SharedPreferences so the
- * worker, the widget and the settings screen all read the same values without extra plumbing.
+ * worker and the settings screen read the same values without extra plumbing.
  */
 class AlertPreferences(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -40,11 +40,6 @@ class AlertPreferences(context: Context) {
             if (value == null) remove(KEY_LAST_START) else putLong(KEY_LAST_START, value.toEpochMilli())
         }
 
-    /** Show made-up rain in the widget, to try the layout before real data arrives. */
-    var demoData: Boolean
-        get() = prefs.getBoolean(KEY_DEMO, false)
-        set(value) = prefs.edit { putBoolean(KEY_DEMO, value) }
-
     private companion object {
         const val FILE = "rain_alerts"
         const val KEY_ENABLED = "enabled"
@@ -52,6 +47,5 @@ class AlertPreferences(context: Context) {
         const val KEY_MIN_INTENSITY = "min_intensity"
         const val KEY_QUIET_HOURS = "quiet_hours"
         const val KEY_LAST_START = "last_announced_start"
-        const val KEY_DEMO = "demo_data"
     }
 }

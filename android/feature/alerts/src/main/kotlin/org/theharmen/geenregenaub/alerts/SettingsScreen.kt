@@ -62,7 +62,6 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     var settings by remember { mutableStateOf(preferences.settings) }
-    var demo by remember { mutableStateOf(preferences.demoData) }
     var canNotify by remember { mutableStateOf(RainAlertNotifier.canNotify(context)) }
 
     fun save(new: AlertSettings) {
@@ -177,18 +176,6 @@ fun SettingsScreen(
                 }
             }
 
-            SectionCard(title = stringResource(R.string.settings_section_widget)) {
-                SwitchRow(
-                    title = stringResource(R.string.settings_demo),
-                    detail = stringResource(R.string.settings_demo_detail),
-                    checked = demo,
-                    onCheckedChange = {
-                        demo = it
-                        preferences.demoData = it
-                        onChanged()
-                    },
-                )
-            }
             Spacer(Modifier.height(24.dp))
         }
     }

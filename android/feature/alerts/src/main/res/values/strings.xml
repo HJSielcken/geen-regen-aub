@@ -20,7 +20,4 @@
     <string name="settings_quiet_hours">Niet storen in de nacht</string>
     <string name="settings_quiet_hours_detail">Geen meldingen tussen 23:00 en 07:00</string>
     <string name="settings_test">Stuur een testmelding</string>
-    <string name="settings_section_widget">Widget</string>
-    <string name="settings_demo">Voorbeeldregen tonen</string>
-    <string name="settings_demo_detail">Laat de widget verzonnen regen zien, om de weergave te bekijken.</string>
 </resources>

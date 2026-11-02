@@ -56,7 +56,7 @@ object RainAlertPolicy {
         if (Duration.between(forecast.issuedAt, now) > MAX_FORECAST_AGE) {
             return AlertDecision.Stay(lastAnnouncedStart)
         }
-        val upcoming = forecast.from(now) ?: return AlertDecision.Stay(lastAnnouncedStart)
+        val upcoming = forecast.remainingAt(now) ?: return AlertDecision.Stay(lastAnnouncedStart)
 
         return when (val verdict = upcoming.verdict(settings.minIntensity.minMmPerHour)) {
             is Verdict.Dry -> AlertDecision.Stay(null)

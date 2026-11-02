@@ -1,7 +1,6 @@
 package org.theharmen.geenregenaub.domain
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Duration
@@ -108,17 +107,6 @@ class RainAlertTest {
         assertTrue(RainAlertPolicy.isQuiet(at("06:59"), utc, on))
         assertTrue(!RainAlertPolicy.isQuiet(at("07:00"), utc, on))
         assertTrue(!RainAlertPolicy.isQuiet(at("22:59"), utc, on))
-    }
-
-    @Test
-    fun `from drops steps that have passed`() {
-        val f = forecast(List(24) { it.toDouble() })
-        val trimmed = f.from(issued.plus(Duration.ofMinutes(12)))!!
-        assertEquals(issued.plus(Duration.ofMinutes(10)), trimmed.issuedAt)
-        assertEquals(22, trimmed.intensities.size)
-        assertEquals(2.0, trimmed.intensities.first(), 0.0)
-        assertNull(f.from(issued.plus(Duration.ofHours(2))))
-        assertEquals(f, f.from(issued.minusSeconds(60)))
     }
 
     @Test

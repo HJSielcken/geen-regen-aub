@@ -35,10 +35,12 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
+import org.theharmen.geenregenaub.data.CachedForecast
+import org.theharmen.geenregenaub.data.GeenRegenData
 import org.theharmen.geenregenaub.domain.RainForecast
 import org.theharmen.geenregenaub.domain.Verdict
 import org.theharmen.geenregenaub.domain.VerdictText
-import org.theharmen.geenregenaub.domain.from
+import org.theharmen.geenregenaub.domain.remainingAt
 import org.theharmen.geenregenaub.domain.isStale
 import org.theharmen.geenregenaub.domain.verdict
 import java.time.Duration
@@ -54,9 +56,9 @@ class RainWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val data = WidgetDependencies.provider(context).latest(context)
+        val data = runCatching { GeenRegenData.forecastRepository(context).latest() }.getOrNull()
         val now = Instant.now()
-        val state = WidgetState.of(data, now, ZoneId.systemDefault())
+        val state = WidgetState.of(data, now, ZoneId.systemDefault(), context.getString(R.string.widget_sample_data))
         val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)
 
         provideContent {
@@ -179,13 +181,15 @@ internal data class WidgetState(
     companion object {
         private val clock = DateTimeFormatter.ofPattern("HH:mm")
 
-        fun of(data: WidgetForecast?, now: Instant, zone: ZoneId): WidgetState {
+        fun of(data: CachedForecast?, now: Instant, zone: ZoneId, sampleLabel: String): WidgetState {
             if (data == null) return WidgetState(null, false, null, false, null, null, null)
             val updated = clock.format(data.fetchedAt.atZone(zone))
-            val upcoming = data.forecast.from(now)
+            val placeName = data.place.name
+            val attribution = if (data.isDemo) sampleLabel else data.attribution
+            val upcoming = data.forecast.remainingAt(now)
             val stale = data.forecast.isStale(now)
             if (upcoming == null || stale) {
-                return WidgetState(null, false, null, true, updated, data.placeName, data.attribution)
+                return WidgetState(null, false, null, true, updated, placeName, attribution)
             }
             val verdict = upcoming.verdict()
             return WidgetState(
@@ -194,8 +198,8 @@ internal data class WidgetState(
                 graph = upcoming,
                 stale = false,
                 updatedAt = updated,
-                placeName = data.placeName,
-                attribution = data.attribution,
+                placeName = placeName,
+                attribution = attribution,
             )
         }
     }
