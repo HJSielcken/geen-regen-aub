@@ -1,6 +1,7 @@
 package org.theharmen.geenregenaub.home
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -17,11 +18,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -29,6 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.theharmen.geenregenaub.domain.Intensity
 import org.theharmen.geenregenaub.domain.RainForecast
+import org.theharmen.geenregenaub.domain.SmoothCurve
 import org.theharmen.geenregenaub.ui.theme.GeenRegenColors
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -42,9 +47,9 @@ private val clock = DateTimeFormatter.ofPattern("HH:mm")
 internal fun mmPerHour(value: Double): String = String.format(Locale.forLanguageTag("nl-NL"), "%.1f mm/u", value)
 
 /**
- * Two-hour rain graph: one bar per 5 minutes on a logarithmic scale, so drizzle stays visible next
- * to a downpour. Dashed lines mark the light, moderate and heavy bands. Tap a bar for its time and
- * intensity.
+ * Two-hour rain graph: a smooth area through one point per 5 minutes, on a logarithmic scale so
+ * drizzle stays visible next to a downpour. Dashed lines mark the moderate and heavy bands. Tap the
+ * graph, or slide a finger along it, to read the time and intensity at that moment.
  */
 @Composable
 fun RainGraph(
@@ -60,6 +65,7 @@ fun RainGraph(
     val baseline = MaterialTheme.colorScheme.outline
     val selectedColor = MaterialTheme.colorScheme.primary
     val emptyText = MaterialTheme.colorScheme.onSurfaceVariant
+    val surface = MaterialTheme.colorScheme.surfaceContainerLow
 
     Column(modifier) {
         val sel = selected
@@ -85,13 +91,22 @@ fun RainGraph(
                     .semantics { contentDescription = summary }
                     .pointerInput(forecast) {
                         detectTapGestures { offset ->
-                            val index = (offset.x / size.width * values.size).toInt().coerceIn(values.indices)
+                            val index = SmoothCurve.nearestIndex(offset.x, size.width.toFloat(), values.size)
                             selected = if (selected == index) null else index
+                        }
+                    }
+                    .pointerInput(forecast) {
+                        // Slide a finger along the graph to read every 5 minutes.
+                        detectHorizontalDragGestures(
+                            onDragStart = { offset ->
+                                selected = SmoothCurve.nearestIndex(offset.x, size.width.toFloat(), values.size)
+                            },
+                        ) { change, _ ->
+                            change.consume()
+                            selected = SmoothCurve.nearestIndex(change.position.x, size.width.toFloat(), values.size)
                         }
                     },
             ) {
-                val slot = size.width / values.size
-                val barWidth = slot * 0.7f
                 fun yOf(v: Double) = size.height * (1f - (ln(1 + v) / ln(1 + scaleTop)).toFloat().coerceIn(0f, 1f))
 
                 for (band in Intensity.entries.drop(1)) {
@@ -104,20 +119,48 @@ fun RainGraph(
                         pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f)),
                     )
                 }
-                values.forEachIndexed { i, v ->
-                    if (v < Intensity.LIGHT.minMmPerHour) return@forEachIndexed
-                    val top = yOf(v).coerceAtMost(size.height - 3.dp.toPx())
-                    val color = if (selected == i) selectedColor else colorFor(v)
-                    drawRoundRect(
-                        color = color,
-                        topLeft = Offset(i * slot + (slot - barWidth) / 2, top),
-                        size = Size(barWidth, size.height - top),
-                        cornerRadius = CornerRadius(barWidth / 3, barWidth / 3),
+
+                val step = if (values.size > 1) size.width / (values.size - 1) else size.width
+                val xs = FloatArray(values.size) { it * step }
+                // Below the drizzle threshold counts as dry, so dry spells sit flat on the baseline.
+                val ys = FloatArray(values.size) { i ->
+                    val v = values[i]
+                    if (v < Intensity.LIGHT.minMmPerHour) size.height else yOf(v)
+                }
+                if (values.isNotEmpty() && ys.any { it < size.height }) {
+                    val line = Path().apply {
+                        moveTo(xs[0], ys[0])
+                        for (seg in SmoothCurve.segments(xs, ys)) {
+                            cubicTo(seg.c1x, seg.c1y, seg.c2x, seg.c2y, seg.x, seg.y)
+                        }
+                    }
+                    val area = Path().apply {
+                        addPath(line)
+                        lineTo(xs.last(), size.height)
+                        lineTo(xs.first(), size.height)
+                        close()
+                    }
+                    // Colour follows height: light rain at the bottom, heavy rain at the top.
+                    val brush = Brush.verticalGradient(
+                        0f to GeenRegenColors.RainHeavy,
+                        (yOf(Intensity.HEAVY.minMmPerHour) / size.height) to GeenRegenColors.RainHeavy,
+                        (yOf(Intensity.MODERATE.minMmPerHour) / size.height) to GeenRegenColors.RainModerate,
+                        1f to GeenRegenColors.RainLight,
+                        startY = 0f,
+                        endY = size.height,
+                    )
+                    drawPath(area, brush, alpha = 0.55f)
+                    drawPath(
+                        line,
+                        brush,
+                        style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
                     )
                 }
-                selected?.let { i ->
-                    val x = i * slot + slot / 2
-                    drawLine(selectedColor.copy(alpha = 0.4f), Offset(x, 0f), Offset(x, size.height), 1.dp.toPx())
+                selected?.takeIf { it in values.indices }?.let { i ->
+                    val x = xs[i]
+                    drawLine(selectedColor.copy(alpha = 0.5f), Offset(x, 0f), Offset(x, size.height), 1.5.dp.toPx())
+                    drawCircle(selectedColor, radius = 5.dp.toPx(), center = Offset(x, ys[i]))
+                    drawCircle(surface, radius = 2.5.dp.toPx(), center = Offset(x, ys[i]))
                 }
                 drawLine(baseline, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
             }
@@ -173,12 +216,6 @@ private fun TimeAxis(forecast: RainForecast, zone: ZoneId) {
             )
         }
     }
-}
-
-internal fun colorFor(mmPerHour: Double): Color = when (Intensity.of(mmPerHour)) {
-    Intensity.HEAVY -> GeenRegenColors.RainHeavy
-    Intensity.MODERATE -> GeenRegenColors.RainModerate
-    else -> GeenRegenColors.RainLight
 }
 
 private const val SCALE_MIN_TOP = 20.0
