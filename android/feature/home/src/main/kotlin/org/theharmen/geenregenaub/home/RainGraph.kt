@@ -122,11 +122,14 @@ fun RainGraph(
 
                 val step = if (values.size > 1) size.width / (values.size - 1) else size.width
                 val xs = FloatArray(values.size) { it * step }
-                // Below the drizzle threshold counts as dry, so dry spells sit flat on the baseline.
-                val ys = FloatArray(values.size) { i ->
+                // Below the drizzle threshold counts as dry, so dry spells sit flat on the baseline;
+                // the steps are softened so a shower fades in and out instead of jumping.
+                val heights = FloatArray(values.size) { i ->
                     val v = values[i]
-                    if (v < Intensity.LIGHT.minMmPerHour) size.height else yOf(v)
+                    if (v < Intensity.LIGHT.minMmPerHour) 0f else size.height - yOf(v)
                 }
+                val soft = SmoothCurve.soften(heights)
+                val ys = FloatArray(values.size) { i -> size.height - soft[i] }
                 if (values.isNotEmpty() && ys.any { it < size.height }) {
                     val line = Path().apply {
                         moveTo(xs[0], ys[0])

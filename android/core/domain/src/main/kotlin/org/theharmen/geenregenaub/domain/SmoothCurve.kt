@@ -58,6 +58,34 @@ object SmoothCurve {
         }
     }
 
+    /**
+     * Softens a row of bar heights (0 = dry) so rain fades in and out instead of jumping up a
+     * whole step: a small binomial blur over neighbouring 5-minute steps (about 10 minutes each
+     * side), then scaled so the highest point keeps its real height. For drawing only.
+     */
+    fun soften(heights: FloatArray): FloatArray {
+        val n = heights.size
+        if (n < 3) return heights.copyOf()
+        val out = FloatArray(n) { i ->
+            var sum = 0f
+            for (k in KERNEL.indices) {
+                val j = (i + k - KERNEL.size / 2).coerceIn(0, n - 1)
+                sum += heights[j] * KERNEL[k]
+            }
+            sum / KERNEL_SUM
+        }
+        val before = heights.max()
+        val after = out.max()
+        if (after > 0f) {
+            val scale = before / after
+            for (i in out.indices) out[i] *= scale
+        }
+        return out
+    }
+
+    private val KERNEL = floatArrayOf(1f, 4f, 6f, 4f, 1f)
+    private const val KERNEL_SUM = 16f
+
     /** Index of the point nearest to [x] when [count] points are spread evenly over [width]. */
     fun nearestIndex(x: Float, width: Float, count: Int): Int {
         if (count <= 1 || width <= 0f) return 0
