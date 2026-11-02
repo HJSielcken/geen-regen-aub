@@ -56,6 +56,8 @@ def create_app(
             "knmi_key_configured": bool(settings.knmi_api_key),
             "shared_secret_configured": bool(settings.shared_secret),
             "knmi_issued_at": None if radar is None else radar.issued_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "last_knmi_error": service.last_knmi_error,
+            "last_open_meteo_error": service.last_open_meteo_error,
         }
 
     @app.get("/v1/rain", dependencies=[Depends(require_secret)])
