@@ -9,9 +9,9 @@ Kotlin, Jetpack Compose with Material 3 (dynamic colour), a Glance home-screen w
 | --- | --- |
 | `:app` | Activity, application class, schedules the background job |
 | `:core:domain` | Pure Kotlin: forecast model, intensity bands, Dutch verdict text (unit tested) |
-| `:core:data` | Relay settings; API client and cache arrive in milestones 2 and 3 |
+| `:core:data` | Relay client, DataStore forecast cache, coarse location, place search (PDOK); entry point `GeenRegenData` |
 | `:core:ui` | Theme and colours |
-| `:feature:home` | Home screen |
+| `:feature:home` | Home screen: verdict, 2-hour rain graph, place picker |
 | `:feature:alerts` | Rain alert settings screen, notification, settings storage |
 | `:widget` | Glance widget (verdict + 2-hour graph) and the 15-minute worker that refreshes, redraws and runs the alert check |
 
@@ -23,8 +23,8 @@ The widget reads the forecast cache from `:core:data` only; the worker refreshes
 away when the first widget is placed or a setting changes). At 2 rows or more it shows the bar
 graph, smaller sizes show just the verdict.
 
-Rain alerts are off by default. Turn them on in **Instellingen**: long-press the app icon, use the
-gear on Android's app info page, or open `SettingsActivity.intent(context)` from inside the app.
+Rain alerts are off by default. Turn them on in **Instellingen**: the gear on the home screen, a
+long-press on the app icon, or the gear on Android's app info page.
 Rules (in `:core:domain`, `RainAlertPolicy`): rain at or above the chosen intensity starting within
 the lead time (15–60 min) notifies once per shower, nothing during quiet hours (23:00–07:00) or
 from a forecast older than 30 minutes, and never from sample data (builds without a relay key show
