@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -23,6 +24,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -59,6 +61,7 @@ import org.theharmen.geenregenaub.data.CachedForecast
 import org.theharmen.geenregenaub.data.FailureReason
 import org.theharmen.geenregenaub.data.LocationSettings
 import org.theharmen.geenregenaub.data.Place
+import org.theharmen.geenregenaub.data.isSameSpot
 import org.theharmen.geenregenaub.domain.ForecastSource
 import org.theharmen.geenregenaub.domain.Headline
 import org.theharmen.geenregenaub.domain.Intensity
@@ -112,12 +115,18 @@ fun HomeScreen(
         onRequestPermission = { permissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION) },
         onChoosePlace = { showPlaces = true },
         onOpenSettings = onOpenSettings,
+        onUseCurrentLocation = {
+            viewModel.useCurrentLocation()
+            if (!hasPermission) permissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+        },
+        onChooseFavorite = viewModel::choose,
         modifier = modifier,
     )
 
     if (showPlaces) {
         PlaceSheet(
             settings = state.settings,
+            favorites = state.favorites,
             query = query,
             results = results,
             onQueryChange = viewModel::onQueryChange,
@@ -130,6 +139,11 @@ fun HomeScreen(
                 showPlaces = false
                 viewModel.choose(place)
             },
+            onSaveFavorite = { place, name, choose ->
+                if (choose) showPlaces = false
+                viewModel.saveFavorite(place, name, choose)
+            },
+            onRemoveFavorite = viewModel::removeFavorite,
             onDismiss = { showPlaces = false },
         )
     }
@@ -144,6 +158,8 @@ internal fun HomeContent(
     onRequestPermission: () -> Unit,
     onChoosePlace: () -> Unit,
     onOpenSettings: (() -> Unit)? = null,
+    onUseCurrentLocation: () -> Unit = {},
+    onChooseFavorite: (Place) -> Unit = {},
     modifier: Modifier = Modifier,
     zone: ZoneId = ZoneId.systemDefault(),
 ) {
@@ -163,6 +179,9 @@ internal fun HomeContent(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Header(state, onChoosePlace, onOpenSettings)
+                if (state.favorites.isNotEmpty()) {
+                    FavoriteChips(state, onUseCurrentLocation, onChooseFavorite)
+                }
 
                 val needsPlace = state.settings.useCurrentLocation && !hasPermission && state.settings.chosenPlace == null
                 if (needsPlace && state.forecast == null) {
@@ -228,6 +247,37 @@ private fun Header(state: HomeUiState, onChoosePlace: () -> Unit, onOpenSettings
             IconButton(onClick = onOpenSettings) {
                 Icon(painterResource(R.drawable.ic_settings), contentDescription = stringResource(R.string.home_settings))
             }
+        }
+    }
+}
+
+/** Quick switch between "Hier" and the saved places, one tap each. */
+@Composable
+private fun FavoriteChips(state: HomeUiState, onUseCurrentLocation: () -> Unit, onChoose: (Place) -> Unit) {
+    val chosen = state.settings.chosenPlace?.takeIf { !state.settings.useCurrentLocation }
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+    ) {
+        FilterChip(
+            selected = state.settings.useCurrentLocation,
+            onClick = onUseCurrentLocation,
+            label = { Text(stringResource(R.string.places_here)) },
+            leadingIcon = {
+                Icon(painterResource(R.drawable.ic_my_location), contentDescription = null, modifier = Modifier.size(18.dp))
+            },
+        )
+        state.favorites.forEach { place ->
+            FilterChip(
+                selected = chosen?.isSameSpot(place) == true,
+                onClick = { onChoose(place) },
+                label = { Text(place.shortName(), maxLines = 1) },
+                leadingIcon = {
+                    Icon(painterResource(R.drawable.ic_star), contentDescription = null, modifier = Modifier.size(18.dp))
+                },
+            )
         }
     }
 }

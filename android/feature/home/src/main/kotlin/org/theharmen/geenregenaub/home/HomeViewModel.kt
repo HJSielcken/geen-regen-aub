@@ -34,6 +34,7 @@ data class HomeUiState(
     val isRefreshing: Boolean = false,
     val failure: FailureReason? = null,
     val hasLoaded: Boolean = false,
+    val favorites: List<Place> = emptyList(),
 )
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
@@ -58,8 +59,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         forecasts.cachedForecast,
         places.settings,
         combine(refreshing, failure, loaded) { r, f, l -> Triple(r, f, l) },
-    ) { now, forecast, settings, (isRefreshing, lastFailure, hasLoaded) ->
-        HomeUiState(now, forecast, settings, isRefreshing, lastFailure, hasLoaded || forecast != null)
+        places.favorites,
+    ) { now, forecast, settings, (isRefreshing, lastFailure, hasLoaded), favorites ->
+        HomeUiState(now, forecast, settings, isRefreshing, lastFailure, hasLoaded || forecast != null, favorites)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
     private val query = MutableStateFlow("")
@@ -123,6 +125,24 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             refreshJob?.join()
             refresh()
         }
+    }
+
+    /** Saves [place] as a favourite called [name] (or renames it), then shows its forecast. */
+    fun saveFavorite(place: Place, name: String, choose: Boolean) {
+        viewModelScope.launch {
+            places.saveFavorite(place, name)
+            if (choose) {
+                val saved = place.copy(name = name.trim().ifEmpty { place.name }, isCurrentLocation = false)
+                places.choose(saved)
+                query.value = ""
+                refreshJob?.join()
+                refresh()
+            }
+        }
+    }
+
+    fun removeFavorite(place: Place) {
+        viewModelScope.launch { places.removeFavorite(place) }
     }
 
     private companion object {
