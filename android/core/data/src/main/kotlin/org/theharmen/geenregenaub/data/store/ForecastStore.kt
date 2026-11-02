@@ -36,6 +36,19 @@ internal class ForecastStore(context: Context) {
     val lastCurrentLocation: Flow<Place?> = dataStore.data
         .map { prefs -> prefs[LAST_CURRENT]?.let(StoredJson::decodePlace) }
 
+    /** Saved places, in the order the user added them. */
+    val favorites: Flow<List<Place>> = dataStore.data
+        .map { prefs -> prefs[FAVORITES]?.let(StoredJson::decodePlaces).orEmpty() }
+        .distinctUntilChanged()
+
+    /** Applies [change] to the saved places in one atomic edit. */
+    suspend fun updateFavorites(change: (List<Place>) -> List<Place>) {
+        dataStore.edit { prefs ->
+            val current = prefs[FAVORITES]?.let(StoredJson::decodePlaces).orEmpty()
+            prefs[FAVORITES] = StoredJson.encodePlaces(change(current))
+        }
+    }
+
     suspend fun saveForecast(forecast: CachedForecast) {
         dataStore.edit { it[FORECAST] = StoredJson.encodeForecast(forecast) }
     }
@@ -57,5 +70,6 @@ internal class ForecastStore(context: Context) {
         val USE_CURRENT = booleanPreferencesKey("use_current_location")
         val CHOSEN_PLACE = stringPreferencesKey("chosen_place_v1")
         val LAST_CURRENT = stringPreferencesKey("last_current_location_v1")
+        val FAVORITES = stringPreferencesKey("favorite_places_v1")
     }
 }

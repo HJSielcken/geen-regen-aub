@@ -32,4 +32,20 @@ interface PlaceRepository {
 
     /** Follow the phone's location again (the chosen place stays as fallback). */
     suspend fun useCurrentLocation()
+
+    /** The user's saved places ("Thuis", "Werk", …), in the order they were added. */
+    val favorites: Flow<List<Place>>
+
+    /**
+     * Saves [place] under [name] (blank keeps its own name). A place at the same spot is
+     * replaced, so this also renames. If it is the chosen place, the chosen place is renamed too.
+     */
+    suspend fun saveFavorite(place: Place, name: String)
+
+    /** Forgets the saved place at the same spot as [place]. */
+    suspend fun removeFavorite(place: Place)
 }
+
+/** True when both are the same point on the map, whatever they are called. */
+fun Place.isSameSpot(other: Place): Boolean =
+    kotlin.math.abs(lat - other.lat) < 1e-5 && kotlin.math.abs(lon - other.lon) < 1e-5

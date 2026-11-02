@@ -83,4 +83,21 @@ class ParsingTest {
         assertNull(StoredJson.decodeForecast("{not json"))
         assertTrue(StoredJson.decodePlace(StoredJson.encodePlace(forecast.place)) == forecast.place)
     }
+
+    @Test
+    fun `saved places round trip`() {
+        val places = listOf(
+            Place("Thuis", 52.1, 5.1, isCurrentLocation = false),
+            Place("Werk", 52.37, 4.89, isCurrentLocation = false),
+        )
+        assertEquals(places, StoredJson.decodePlaces(StoredJson.encodePlaces(places)))
+        assertEquals(emptyList<Place>(), StoredJson.decodePlaces("{not json"))
+    }
+
+    @Test
+    fun `same spot ignores the name`() {
+        val a = Place("Utrecht, Utrecht, Utrecht", 52.09074, 5.10547, isCurrentLocation = false)
+        assertTrue(a.isSameSpot(a.copy(name = "Thuis")))
+        assertTrue(!a.isSameSpot(a.copy(lat = 52.1)))
+    }
 }

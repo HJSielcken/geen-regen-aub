@@ -1,6 +1,7 @@
 package org.theharmen.geenregenaub.data.store
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import org.theharmen.geenregenaub.data.CachedForecast
 import org.theharmen.geenregenaub.data.Place
@@ -37,6 +38,13 @@ internal object StoredJson {
 
     fun decodePlace(value: String): Place? =
         runCatching { json.decodeFromString(StoredPlace.serializer(), value).place() }.getOrNull()
+
+    fun encodePlaces(places: List<Place>): String =
+        json.encodeToString(ListSerializer(StoredPlace.serializer()), places.map { it.stored() })
+
+    fun decodePlaces(value: String): List<Place> =
+        runCatching { json.decodeFromString(ListSerializer(StoredPlace.serializer()), value).map { it.place() } }
+            .getOrDefault(emptyList())
 
     fun encodeForecast(value: CachedForecast): String = json.encodeToString(
         StoredForecast.serializer(),
