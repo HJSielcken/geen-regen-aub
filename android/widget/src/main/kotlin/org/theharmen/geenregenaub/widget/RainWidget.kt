@@ -34,6 +34,11 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
+import androidx.glance.appwidget.updateAll
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import org.theharmen.geenregenaub.data.CachedForecast
 import org.theharmen.geenregenaub.data.GeenRegenData
 import org.theharmen.geenregenaub.domain.RainForecast
@@ -154,6 +159,16 @@ class RainWidget : GlanceAppWidget() {
 
     /** Room left for the graph after the headline, axis labels, footer and padding. */
     private fun graphHeight(widgetHeight: Dp): Dp = (widgetHeight - 104.dp).coerceIn(32.dp, 180.dp)
+
+    companion object {
+        private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+        /** Redraw every rain widget, e.g. after a colour change in Instellingen. */
+        fun updateAllAsync(context: Context) {
+            val app = context.applicationContext
+            scope.launch { runCatching { RainWidget().updateAll(app) } }
+        }
+    }
 }
 
 /** Everything the widget shows, worked out before composing. */

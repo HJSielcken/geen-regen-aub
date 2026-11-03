@@ -190,9 +190,9 @@ fun SettingsScreen(
                 }
             }
 
-            AppearanceSection(onChanged = onChanged)
+            AppearanceSection()
 
-            WidgetSection(onChanged = onChanged)
+            WidgetSection()
 
             Spacer(Modifier.height(24.dp))
         }
@@ -201,7 +201,7 @@ fun SettingsScreen(
 
 /** Licht / donker / systeem, and whether to take colours from the wallpaper. */
 @Composable
-private fun AppearanceSection(onChanged: () -> Unit) {
+private fun AppearanceSection() {
     val context = LocalContext.current
     val prefs = remember { AppearancePreferences(context) }
     val appearance = rememberAppearance()
@@ -218,7 +218,7 @@ private fun AppearanceSection(onChanged: () -> Unit) {
                     selected = appearance.mode == mode,
                     onClick = {
                         prefs.appearance = appearance.copy(mode = mode)
-                        onChanged() // the widgets follow the theme too
+                        AlertsHooks.onWidgetLookChanged(context)
                     },
                     shape = SegmentedButtonDefaults.itemShape(index, options.size),
                 ) {
@@ -234,7 +234,7 @@ private fun AppearanceSection(onChanged: () -> Unit) {
                 checked = appearance.dynamicColor,
                 onCheckedChange = {
                     prefs.appearance = appearance.copy(dynamicColor = it)
-                    onChanged()
+                    AlertsHooks.onWidgetLookChanged(context)
                 },
             )
         }
@@ -243,7 +243,7 @@ private fun AppearanceSection(onChanged: () -> Unit) {
 
 /** Widget background: the theme colour, see-through, or none at all. */
 @Composable
-private fun WidgetSection(onChanged: () -> Unit) {
+private fun WidgetSection() {
     val context = LocalContext.current
     val prefs = remember { WidgetPreferences(context) }
     var background by remember { mutableStateOf(prefs.background) }
@@ -261,7 +261,7 @@ private fun WidgetSection(onChanged: () -> Unit) {
                     onClick = {
                         background = option
                         prefs.background = option
-                        onChanged()
+                        AlertsHooks.onWidgetLookChanged(context)
                     },
                     shape = SegmentedButtonDefaults.itemShape(index, options.size),
                 ) {
@@ -278,7 +278,7 @@ private fun WidgetSection(onChanged: () -> Unit) {
             onSelect = {
                 backgroundColor = it
                 prefs.backgroundColor = it
-                onChanged()
+                AlertsHooks.onWidgetLookChanged(context)
             },
         )
         HorizontalDivider()
@@ -290,7 +290,7 @@ private fun WidgetSection(onChanged: () -> Unit) {
             onSelect = {
                 textColor = it
                 prefs.textColor = it
-                onChanged()
+                AlertsHooks.onWidgetLookChanged(context)
             },
         )
         Text(

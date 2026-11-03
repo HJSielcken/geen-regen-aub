@@ -11,6 +11,7 @@ import org.theharmen.geenregenaub.alerts.AlertsHooks
 import org.theharmen.geenregenaub.alerts.RainAlertNotifier
 import org.theharmen.geenregenaub.forecast.WeatherHooks
 import org.theharmen.geenregenaub.widget.ForecastWidget
+import org.theharmen.geenregenaub.widget.RainWidget
 import org.theharmen.geenregenaub.widget.WidgetRefreshWorker
 
 class GeenRegenApp : Application() {
@@ -29,6 +30,10 @@ class GeenRegenApp : Application() {
         startCrashReporting()
         RainAlertNotifier.createChannel(this)
         AlertsHooks.onSettingsChanged = { context -> WidgetRefreshWorker.runNow(context) }
+        AlertsHooks.onWidgetLookChanged = { context ->
+            RainWidget.updateAllAsync(context)
+            ForecastWidget.updateAllAsync(context)
+        }
         WeatherHooks.onWeatherUpdated = { context -> ForecastWidget.updateAllAsync(context) }
         WidgetRefreshWorker.schedule(this)
     }
