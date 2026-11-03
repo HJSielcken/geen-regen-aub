@@ -9,7 +9,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
-import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
@@ -35,6 +34,7 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
+import org.theharmen.geenregenaub.alerts.WidgetPreferences
 import org.theharmen.geenregenaub.data.CachedForecast
 import org.theharmen.geenregenaub.data.GeenRegenData
 import org.theharmen.geenregenaub.domain.RainForecast
@@ -56,13 +56,14 @@ class RainWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        val look = WidgetPreferences(context).background
         val data = runCatching { GeenRegenData.forecastRepository(context).latest() }.getOrNull()
         val now = Instant.now()
         val state = WidgetState.of(data, now, ZoneId.systemDefault(), context.getString(R.string.widget_sample_data))
         val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)
 
         provideContent {
-            GlanceTheme {
+            WidgetTheme(look) {
                 Content(state, launch)
             }
         }
@@ -70,11 +71,12 @@ class RainWidget : GlanceAppWidget() {
 
     @Composable
     private fun Content(state: WidgetState, launch: Intent?) {
+        val palette = LocalWidgetPalette.current
         val context = LocalContext.current
         val size = LocalSize.current
         var modifier = GlanceModifier
             .fillMaxSize()
-            .background(GlanceTheme.colors.widgetBackground)
+            .background(palette.background)
             .cornerRadius(20.dp)
             .padding(horizontal = 16.dp, vertical = 12.dp)
         if (launch != null) modifier = modifier.clickable(actionStartActivity(launch))
@@ -85,7 +87,7 @@ class RainWidget : GlanceAppWidget() {
                 text = state.headline(context),
                 maxLines = 2,
                 style = TextStyle(
-                    color = if (state.isRain) GlanceTheme.colors.primary else GlanceTheme.colors.onSurface,
+                    color = if (state.isRain) palette.accent else palette.text,
                     fontSize = if (size.width < 180.dp) 15.sp else 18.sp,
                     fontWeight = FontWeight.Bold,
                 ),
@@ -105,7 +107,7 @@ class RainWidget : GlanceAppWidget() {
                 Text(
                     text = context.getString(R.string.widget_no_data_detail),
                     maxLines = 2,
-                    style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 13.sp),
+                    style = TextStyle(color = palette.textVariant, fontSize = 13.sp),
                 )
             }
 
@@ -113,17 +115,18 @@ class RainWidget : GlanceAppWidget() {
             Text(
                 text = state.footer(context),
                 maxLines = 1,
-                style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 11.sp),
+                style = TextStyle(color = palette.textVariant, fontSize = 11.sp),
             )
         }
     }
 
     @Composable
     private fun Graph(forecast: RainForecast, description: String, width: Dp, height: Dp) {
+        val palette = LocalWidgetPalette.current
         val context = LocalContext.current
         val density = context.resources.displayMetrics.density
-        val rain = GlanceTheme.colors.primary.getColor(context).toArgb()
-        val grid = GlanceTheme.colors.onSurfaceVariant.getColor(context).copy(alpha = 0.3f).toArgb()
+        val rain = palette.accent.getColor(context).toArgb()
+        val grid = palette.textVariant.getColor(context).copy(alpha = 0.3f).toArgb()
         val bitmap = RainGraphRenderer.render(
             forecast = forecast,
             widthPx = (width.value * density).toInt(),
@@ -142,10 +145,11 @@ class RainWidget : GlanceAppWidget() {
 
     @Composable
     private fun androidx.glance.layout.RowScope.AxisLabel(text: String, align: TextAlign) {
+        val palette = LocalWidgetPalette.current
         Text(
             text = text,
             modifier = GlanceModifier.defaultWeight(),
-            style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 11.sp, textAlign = align),
+            style = TextStyle(color = palette.textVariant, fontSize = 11.sp, textAlign = align),
         )
     }
 
@@ -161,7 +165,8 @@ internal data class WidgetState(
     val stale: Boolean,
     val updatedAt: String?,
     val placeName: String?,
-    val attribution: String?,
+    /** Only for sample data, so it is never mistaken for a real forecast. */
+    val sampleLabel: String?,
 ) {
     fun headline(context: Context): String = when {
         verdictText == null && updatedAt != null -> context.getString(R.string.widget_stale)
@@ -173,9 +178,9 @@ internal data class WidgetState(
         val parts = buildList {
             placeName?.let(::add)
             updatedAt?.let { add(context.getString(if (stale) R.string.widget_updated_stale else R.string.widget_updated, it)) }
-            attribution?.let(::add)
+            sampleLabel?.let(::add)
         }
-        return if (parts.isEmpty()) context.getString(R.string.widget_attribution) else parts.joinToString(" · ")
+        return parts.joinToString(" · ")
     }
 
     companion object {
@@ -185,11 +190,12 @@ internal data class WidgetState(
             if (data == null) return WidgetState(null, false, null, false, null, null, null)
             val updated = clock.format(data.fetchedAt.atZone(zone))
             val placeName = data.place.name.substringBefore(",").trim()
-            val attribution = if (data.isDemo) sampleLabel else data.attribution
+            // The widget names no data source; the app itself credits KNMI.
+            val label = if (data.isDemo) sampleLabel else null
             val upcoming = data.forecast.remainingAt(now)
             val stale = data.forecast.isStale(now)
             if (upcoming == null || stale) {
-                return WidgetState(null, false, null, true, updated, placeName, attribution)
+                return WidgetState(null, false, null, true, updated, placeName, label)
             }
             val verdict = upcoming.verdict()
             return WidgetState(
@@ -199,7 +205,7 @@ internal data class WidgetState(
                 stale = false,
                 updatedAt = updated,
                 placeName = placeName,
-                attribution = attribution,
+                sampleLabel = label,
             )
         }
     }

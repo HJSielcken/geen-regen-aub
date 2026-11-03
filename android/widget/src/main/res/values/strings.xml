@@ -7,7 +7,6 @@
     <string name="widget_stale">Verwachting verouderd</string>
     <string name="widget_updated">%1$s</string>
     <string name="widget_updated_stale">laatst %1$s</string>
-    <string name="widget_attribution">KNMI</string>
     <string name="widget_sample_data">Voorbeeldgegevens</string>
     <string name="widget_axis_now">Nu</string>
     <string name="widget_axis_one_hour">+1 uur</string>

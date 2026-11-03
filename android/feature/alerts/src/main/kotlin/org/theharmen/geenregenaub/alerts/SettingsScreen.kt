@@ -181,6 +181,8 @@ fun SettingsScreen(
 
             AppearanceSection()
 
+            WidgetSection(onChanged = onChanged)
+
             Spacer(Modifier.height(24.dp))
         }
     }
@@ -219,6 +221,42 @@ private fun AppearanceSection() {
                 onCheckedChange = { prefs.appearance = appearance.copy(dynamicColor = it) },
             )
         }
+    }
+}
+
+/** Widget background: the theme colour, see-through, or none at all. */
+@Composable
+private fun WidgetSection(onChanged: () -> Unit) {
+    val context = LocalContext.current
+    val prefs = remember { WidgetPreferences(context) }
+    var background by remember { mutableStateOf(prefs.background) }
+    SectionCard(title = stringResource(R.string.settings_section_widgets)) {
+        Label(stringResource(R.string.settings_widget_background), enabled = true)
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            val options = listOf(
+                WidgetBackground.SOLID to R.string.settings_widget_background_solid,
+                WidgetBackground.TRANSLUCENT to R.string.settings_widget_background_translucent,
+                WidgetBackground.TRANSPARENT to R.string.settings_widget_background_transparent,
+            )
+            options.forEachIndexed { index, (option, label) ->
+                SegmentedButton(
+                    selected = background == option,
+                    onClick = {
+                        background = option
+                        prefs.background = option
+                        onChanged()
+                    },
+                    shape = SegmentedButtonDefaults.itemShape(index, options.size),
+                ) {
+                    Text(stringResource(label))
+                }
+            }
+        }
+        Text(
+            text = stringResource(R.string.settings_widget_background_detail),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
