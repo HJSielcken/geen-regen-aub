@@ -2,15 +2,16 @@ package org.theharmen.geenregenaub.map
 
 /**
  * The base map: OpenFreeMap's worldwide vector styles (OpenStreetMap data, ODbL; free, no key, no
- * usage limits), "liberty" in light mode and "dark" in dark mode. Tiles are fetched on demand, so
- * the APK does not grow. https://openfreemap.org/
+ * usage limits). The colourful "liberty" style is used in dark mode too: OpenFreeMap's dark style
+ * made the land nearly black. Tiles are fetched on demand, so the APK does not grow.
+ * https://openfreemap.org/
  *
  * If that style cannot be loaded, [fallbackJson] gives PDOK's grey BRT Achtergrondkaart, the Dutch
  * government's free, keyless map of the Netherlands (Kadaster, CC BY 4.0).
  */
 internal object BaseMap {
-    fun styleUri(dark: Boolean): String =
-        "https://tiles.openfreemap.org/styles/" + if (dark) "dark" else "liberty"
+    @Suppress("UNUSED_PARAMETER")
+    fun styleUri(dark: Boolean): String = "https://tiles.openfreemap.org/styles/liberty"
 
     private const val TILES = "https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/grijs/EPSG:3857/{z}/{x}/{y}.png"
 
