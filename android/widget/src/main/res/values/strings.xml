@@ -28,7 +28,9 @@
     <string name="daily_widget_title">Komende dagen</string>
     <string name="forecast_widget_feels_like">Voelt als %1$s</string>
     <string name="forecast_widget_max_min">max %1$s · min %2$s</string>
+    <string name="forecast_widget_wind">Wind</string>
     <string name="forecast_widget_humidity">Vochtigheid</string>
+    <string name="forecast_widget_gusts">Windstoten</string>
     <string name="forecast_widget_sunrise">Zonsopkomst</string>
     <string name="forecast_widget_sunset">Zonsondergang</string>
     <string name="forecast_widget_no_data">Nog geen weerbericht</string>
@@ -36,22 +38,4 @@
     <string name="forecast_widget_now">Nu</string>
     <string name="forecast_widget_today">Vandaag</string>
     <string name="forecast_widget_tomorrow">Morgen</string>
-
-    <string name="air_widget_name">Luchtkwaliteit</string>
-    <string name="air_widget_description">Luchtkwaliteitsindex nu en de komende uren (Copernicus)</string>
-    <string name="air_widget_no_data">Nog geen luchtkwaliteit</string>
-    <string name="air_widget_unit">Europese index</string>
-    <string name="sun_widget_name">Zon</string>
-    <string name="sun_widget_description">Zonsopkomst, zonsondergang en waar de zon nu staat</string>
-    <string name="sun_widget_today">Vandaag</string>
-    <string name="sun_widget_tomorrow">Morgen</string>
-    <string name="sun_widget_day_length">Daglengte %1$s</string>
-    <string name="sun_widget_daylight_left">Nog %1$s daglicht</string>
-    <string name="sun_widget_rises_in">Zon op over %1$s</string>
-    <string name="moon_widget_name">Maan</string>
-    <string name="moon_widget_description">De maanfase en de volgende nieuwe en volle maan</string>
-    <string name="moon_widget_lit">%1$d%% verlicht</string>
-    <string name="wind_widget_name">Wind</string>
-    <string name="wind_widget_description">Windkracht, richting en windstoten</string>
-    <string name="wind_widget_gusts">Windstoten %1$s</string>
 </resources>

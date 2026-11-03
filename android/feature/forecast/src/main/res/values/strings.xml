@@ -28,4 +28,13 @@
     <string name="weather_licence_title">Meteocons</string>
     <string name="weather_close">Sluiten</string>
     <string name="weather_expand_day">Details voor %1$s</string>
+    <string name="weather_air_title">Luchtkwaliteit</string>
+    <string name="weather_sun_title">Zon</string>
+    <string name="weather_sun_day_length">Daglengte %1$s</string>
+    <string name="weather_sun_left">Nog %1$s daglicht</string>
+    <string name="weather_sun_rises_in">De zon komt op over %1$s</string>
+    <string name="weather_sun_tomorrow">Morgen komt de zon op om %1$s</string>
+    <string name="weather_moon_title">Maan</string>
+    <string name="weather_moon_lit">%1$d%% verlicht</string>
+    <string name="weather_gusts_value">Windstoten %1$s</string>
 </resources>
