@@ -19,11 +19,11 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
-/** The three weather widgets (now, per hour, per day), redrawn together. */
+/** The weather widgets (now, per hour, per day, clock), redrawn together. */
 object WeatherWidgets {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    internal fun all(): List<GlanceAppWidget> = listOf(CurrentWeatherWidget(), HourlyWeatherWidget(), DailyWeatherWidget())
+    internal fun all(): List<GlanceAppWidget> = listOf(CurrentWeatherWidget(), HourlyWeatherWidget(), DailyWeatherWidget(), ClockWidget())
 
     /** Redraw every weather widget, e.g. after the app fetched a new forecast. */
     fun updateAllAsync(context: Context) {
