@@ -47,10 +47,8 @@ import org.theharmen.geenregenaub.forecast.icon
 class CurrentWeatherWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Responsive(
         setOf(
-            DpSize(110.dp, 48.dp), DpSize(200.dp, 48.dp), DpSize(280.dp, 48.dp),
-            DpSize(110.dp, 100.dp), DpSize(200.dp, 100.dp), DpSize(280.dp, 100.dp),
-            DpSize(200.dp, 160.dp), DpSize(280.dp, 160.dp),
-        ),
+            DpSize(110.dp, 48.dp), DpSize(110.dp, 64.dp), DpSize(110.dp, 82.dp),
+        ) + listOf(200.dp, 280.dp).flatMap { w -> HEIGHTS.map { h -> DpSize(w, h) } },
     )
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
@@ -65,11 +63,19 @@ class CurrentWeatherWidget : GlanceAppWidget() {
     @Composable
     private fun Content(state: WeatherWidgetState?, open: Intent) {
         val size = LocalSize.current
-        val short = size.height < 100.dp
-        val tall = size.height >= 160.dp
+        // Each step adds one line, at the height where it fits (see HEIGHTS).
+        val h = size.height
+        val short = h < HEIGHTS[1]
+        val tall = h >= HEIGHTS[5]
+        val showDetail = h >= HEIGHTS[2]
+        val factRows = when {
+            h >= HEIGHTS[4] -> 2
+            h >= HEIGHTS[3] -> 1
+            else -> 0
+        }
         WidgetSurface(
             GlanceModifier
-                .padding(horizontal = 14.dp, vertical = if (short) 6.dp else 12.dp)
+                .padding(horizontal = 14.dp, vertical = 6.dp)
                 .clickable(actionStartActivity(open)),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -78,10 +84,10 @@ class CurrentWeatherWidget : GlanceAppWidget() {
                 return@WidgetSurface
             }
             Header(state, short, tall, wide = size.width >= 200.dp)
-            if (!short) Detail(state)
-            if (tall) {
-                Spacer(GlanceModifier.height(10.dp))
-                Facts(state)
+            if (showDetail) Detail(state)
+            if (factRows > 0) {
+                Spacer(GlanceModifier.height(if (tall) 10.dp else 6.dp))
+                Facts(state, factRows)
             }
         }
     }
@@ -94,7 +100,7 @@ class CurrentWeatherWidget : GlanceAppWidget() {
             Image(
                 provider = ImageProvider(state.condition.icon(state.isDay)),
                 contentDescription = description,
-                modifier = GlanceModifier.size(if (short) 36.dp else if (tall) 64.dp else 52.dp),
+                modifier = GlanceModifier.size(if (short) 36.dp else if (tall) 64.dp else 48.dp),
             )
             Spacer(GlanceModifier.width(8.dp))
             Column(modifier = GlanceModifier.defaultWeight()) {
@@ -151,7 +157,7 @@ class CurrentWeatherWidget : GlanceAppWidget() {
 
     /** Wind, gusts, humidity and sunrise/sunset, each behind its own icon. */
     @Composable
-    private fun Facts(state: WeatherWidgetState) {
+    private fun Facts(state: WeatherWidgetState, rows: Int) {
         val context = LocalContext.current
         val first = buildList {
             WeatherFormat.wind(state.windSpeedKmh, state.windDirectionDegrees)?.let {
@@ -173,7 +179,7 @@ class CurrentWeatherWidget : GlanceAppWidget() {
             }
         }
         // Three to a row, so the columns line up between the rows.
-        listOf(first, second).filter { it.isNotEmpty() }.forEachIndexed { index, row ->
+        listOf(first, second).filter { it.isNotEmpty() }.take(rows).forEachIndexed { index, row ->
             if (index > 0) Spacer(GlanceModifier.height(6.dp))
             Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 row.forEach { FactCell(it) }
@@ -199,6 +205,15 @@ class CurrentWeatherWidget : GlanceAppWidget() {
         }
     }
 }
+
+private val HEIGHTS = listOf(
+    48.dp, // temperature only
+    64.dp, // + condition
+    82.dp, // + "voelt als · max · min"
+    106.dp, // + wind, gusts, humidity
+    130.dp, // + sunrise, sunset
+    160.dp, // bigger icon and temperature
+)
 
 /**
  * The receiver keeps its old name, so a weather widget that is already on someone's home screen
