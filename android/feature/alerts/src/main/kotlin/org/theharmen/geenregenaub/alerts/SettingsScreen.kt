@@ -298,6 +298,18 @@ private fun WidgetSection() {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        HorizontalDivider()
+        var intensityLines by remember { mutableStateOf(prefs.intensityLines) }
+        SwitchRow(
+            title = stringResource(R.string.settings_widget_intensity_lines),
+            detail = stringResource(R.string.settings_widget_intensity_lines_detail),
+            checked = intensityLines,
+            onCheckedChange = {
+                intensityLines = it
+                prefs.intensityLines = it
+                AlertsHooks.onWidgetLookChanged(context)
+            },
+        )
     }
 }
 

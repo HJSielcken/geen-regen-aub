@@ -42,7 +42,7 @@ class WidgetRefreshWorker(context: Context, params: WorkerParameters) : Coroutin
         // The weather forecast follows the place the rain fetch just resolved; it only fetches
         // when its cache is older than half an hour, so most runs cost nothing.
         runCatching { WeatherData.repository(context).refresh() }
-        runCatching { ForecastWidget().updateAll(context) }
+        WeatherWidgets.updateAll(context)
 
         // Sample data (a build without a relay key) never triggers a real-looking alert.
         if (data != null && !data.isDemo) checkAlert(context, data)

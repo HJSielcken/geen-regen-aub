@@ -413,8 +413,8 @@ private fun TemperatureBar(min: Double, max: Double, low: Double, high: Double, 
     }
 }
 
-/** Blue below freezing, through green and yellow, to orange-red at 30 °C. */
-private fun temperatureColor(celsius: Double): Color {
+/** Blue below freezing, through green and yellow, to orange-red at 30 °C. Also used by the widgets. */
+fun temperatureColor(celsius: Double): Color {
     val stops = listOf(
         -5.0 to Color(0xFF5B8DEF),
         5.0 to Color(0xFF4FC3F7),

@@ -26,6 +26,18 @@ internal object RainGraphRenderer {
     private const val MAX_HEIGHT_PX = 400
     private const val POINTS = 25
 
+    /** Room on the right for the "zwaar" / "matig" / "licht" labels, when they are shown. */
+    const val GUIDE_GUTTER_DP = 38
+
+    /** Labelled lines where matig and zwaar begin, with "licht" along the bottom. */
+    class Guides(
+        val lineColor: Int,
+        val labelColor: Int,
+        val light: String,
+        val moderate: String,
+        val heavy: String,
+    )
+
     fun render(
         forecast: RainForecast,
         widthPx: Int,
@@ -33,6 +45,7 @@ internal object RainGraphRenderer {
         density: Float,
         rainColor: Int,
         gridColor: Int,
+        guides: Guides? = null,
     ): Bitmap {
         val scale = min(1f, min(MAX_WIDTH_PX.toFloat() / max(widthPx, 1), MAX_HEIGHT_PX.toFloat() / max(heightPx, 1)))
         val w = max(1, (widthPx * scale).toInt())
@@ -43,22 +56,14 @@ internal object RainGraphRenderer {
 
         val baselineHeight = max(1f, 1.5f * d)
         val chartBottom = h - baselineHeight
-        val grid = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = gridColor
-            strokeWidth = max(1f, d)
-            style = Paint.Style.STROKE
-            pathEffect = android.graphics.DashPathEffect(floatArrayOf(3 * d, 3 * d), 0f)
-        }
-        // Guides at the moderate and heavy thresholds.
-        for (band in listOf(Intensity.MODERATE, Intensity.HEAVY)) {
-            val y = chartBottom - RainScale.fraction(band.minMmPerHour) * chartBottom
-            canvas.drawLine(0f, y, w.toFloat(), y, grid)
-        }
+        // With labels, the curve keeps clear of the label column on the right.
+        val chartRight = if (guides != null) max(1f, w - GUIDE_GUTTER_DP * d) else w.toFloat()
+        if (guides != null) drawGuides(canvas, guides, chartRight, chartBottom, d)
 
         // Smooth area through one point per 5 minutes; dry steps sit on the baseline.
         val values = forecast.intensities.take(POINTS)
         if (values.size >= 2 && values.any { Intensity.of(it) != null }) {
-            val step = w.toFloat() / (values.size - 1)
+            val step = chartRight / (values.size - 1)
             val xs = FloatArray(values.size) { it * step }
             val heights = FloatArray(values.size) { i ->
                 val mm = values[i]
@@ -106,8 +111,40 @@ internal object RainGraphRenderer {
         }
 
         val base = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = gridColor; style = Paint.Style.FILL }
-        canvas.drawRect(0f, chartBottom, w.toFloat(), h.toFloat(), base)
+        canvas.drawRect(0f, chartBottom, chartRight, h.toFloat(), base)
         return bitmap
+    }
+
+    private fun drawGuides(canvas: Canvas, guides: Guides, chartRight: Float, chartBottom: Float, d: Float) {
+        val line = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = guides.lineColor
+            strokeWidth = max(1f, d)
+            style = Paint.Style.STROKE
+            pathEffect = android.graphics.DashPathEffect(floatArrayOf(4 * d, 3 * d), 0f)
+        }
+        val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = guides.labelColor
+            textSize = 10f * d
+        }
+        val textHeight = text.fontMetrics.let { it.descent - it.ascent }
+        val yHeavy = chartBottom - RainScale.fraction(Intensity.HEAVY.minMmPerHour) * chartBottom
+        val yModerate = chartBottom - RainScale.fraction(Intensity.MODERATE.minMmPerHour) * chartBottom
+        canvas.drawLine(0f, yHeavy, chartRight, yHeavy, line)
+        canvas.drawLine(0f, yModerate, chartRight, yModerate, line)
+
+        // Each label sits on its line; in a low graph they are pushed apart so they never overlap.
+        val half = textHeight / 2
+        val lightY = chartBottom - half
+        val moderateY = min(yModerate, lightY - textHeight)
+        val heavyY = max(half, min(yHeavy, moderateY - textHeight))
+        val x = chartRight + 4 * d
+        fun label(value: String, centreY: Float) {
+            val baseline = centreY - (text.fontMetrics.ascent + text.fontMetrics.descent) / 2
+            canvas.drawText(value, x, baseline, text)
+        }
+        label(guides.heavy, heavyY)
+        label(guides.moderate, moderateY)
+        label(guides.light, lightY)
     }
 
     private fun shade(color: Int, intensity: Intensity): Int {

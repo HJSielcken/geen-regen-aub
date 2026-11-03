@@ -12,8 +12,23 @@
     <string name="widget_axis_one_hour">+1 uur</string>
     <string name="widget_axis_two_hours">+2 uur</string>
 
-    <string name="forecast_widget_name">Weerbericht</string>
-    <string name="forecast_widget_description">Temperatuur en weer per uur en per dag</string>
+    <string name="widget_intensity_light">licht</string>
+    <string name="widget_intensity_moderate">matig</string>
+    <string name="widget_intensity_heavy">zwaar</string>
+
+    <string name="forecast_widget_name">Weer nu</string>
+    <string name="forecast_widget_description">Temperatuur en weer op dit moment</string>
+    <string name="hourly_widget_name">Weer per uur</string>
+    <string name="hourly_widget_description">Het weer voor de komende uren</string>
+    <string name="hourly_widget_title">Komende uren</string>
+    <string name="daily_widget_name">Weer per dag</string>
+    <string name="daily_widget_description">Het weer voor vandaag en de komende dagen</string>
+    <string name="daily_widget_title">Komende dagen</string>
+    <string name="forecast_widget_feels_like">Voelt als %1$s</string>
+    <string name="forecast_widget_max_min">max %1$s · min %2$s</string>
+    <string name="forecast_widget_wind">Wind</string>
+    <string name="forecast_widget_humidity">Vochtigheid</string>
+    <string name="forecast_widget_sun">Zon op / onder</string>
     <string name="forecast_widget_no_data">Nog geen weerbericht</string>
     <string name="forecast_widget_no_data_detail">Open de app om je plek te kiezen</string>
     <string name="forecast_widget_now">Nu</string>

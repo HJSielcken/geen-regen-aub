@@ -24,5 +24,27 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/forecast_widget_info" />
         </receiver>
+        <receiver
+            android:name=".HourlyWeatherWidgetReceiver"
+            android:exported="true"
+            android:label="@string/hourly_widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/hourly_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".DailyWeatherWidgetReceiver"
+            android:exported="true"
+            android:label="@string/daily_widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/daily_widget_info" />
+        </receiver>
     </application>
 </manifest>

@@ -101,7 +101,9 @@ class RainWidget : GlanceAppWidget() {
             if (!compact && graph != null) {
                 Spacer(GlanceModifier.height(8.dp))
                 Graph(graph, state.headline(context), size.width - 32.dp, graphHeight(size.height))
-                Row(modifier = GlanceModifier.fillMaxWidth().padding(top = 2.dp)) {
+                // With the intensity labels on, the time axis ends where the curve ends.
+                val axisEnd = if (LocalWidgetLook.current.intensityLines) RainGraphRenderer.GUIDE_GUTTER_DP.dp else 0.dp
+                Row(modifier = GlanceModifier.fillMaxWidth().padding(top = 2.dp, end = axisEnd)) {
                     AxisLabel(context.getString(R.string.widget_axis_now), TextAlign.Start)
                     AxisLabel(context.getString(R.string.widget_axis_one_hour), TextAlign.Center)
                     AxisLabel(context.getString(R.string.widget_axis_two_hours), TextAlign.End)
@@ -130,7 +132,19 @@ class RainWidget : GlanceAppWidget() {
         val context = LocalContext.current
         val density = context.resources.displayMetrics.density
         val rain = palette.accent.getColor(context).toArgb()
-        val grid = palette.textVariant.getColor(context).copy(alpha = 0.3f).toArgb()
+        val label = palette.textVariant.getColor(context)
+        val grid = label.copy(alpha = 0.3f).toArgb()
+        val guides = if (LocalWidgetLook.current.intensityLines) {
+            RainGraphRenderer.Guides(
+                lineColor = label.copy(alpha = 0.55f).toArgb(),
+                labelColor = label.toArgb(),
+                light = context.getString(R.string.widget_intensity_light),
+                moderate = context.getString(R.string.widget_intensity_moderate),
+                heavy = context.getString(R.string.widget_intensity_heavy),
+            )
+        } else {
+            null
+        }
         val bitmap = RainGraphRenderer.render(
             forecast = forecast,
             widthPx = (width.value * density).toInt(),
@@ -138,6 +152,7 @@ class RainWidget : GlanceAppWidget() {
             density = density,
             rainColor = rain,
             gridColor = grid,
+            guides = guides,
         )
         Image(
             provider = ImageProvider(bitmap),

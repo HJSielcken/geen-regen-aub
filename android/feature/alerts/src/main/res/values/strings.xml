@@ -39,4 +39,6 @@
     <string name="settings_widget_background_color">Achtergrondkleur</string>
     <string name="settings_widget_color_theme">Thema</string>
     <string name="settings_widget_background_detail">Thema volgt de weergave hierboven. Automatisch kiest een tekstkleur die goed leesbaar is op de achtergrond.</string>
+    <string name="settings_widget_intensity_lines">Lijnen in de regengrafiek</string>
+    <string name="settings_widget_intensity_lines_detail">Toon in de regenwidget waar licht, matig en zwaar beginnen</string>
 </resources>
