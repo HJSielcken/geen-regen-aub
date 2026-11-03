@@ -1,8 +1,6 @@
 package org.theharmen.geenregenaub.map
 
 import android.os.Bundle
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,12 +17,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -35,8 +31,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -99,9 +93,7 @@ fun RadarMapScreen(onBack: () -> Unit, viewModel: RadarMapViewModel = viewModel(
 
         Controls(
             state = state,
-            onSelect = viewModel::select,
             onSelectTime = viewModel::selectTime,
-            onTogglePlay = viewModel::togglePlay,
             onRetry = viewModel::load,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -218,9 +210,7 @@ private fun quad(b: RadarBounds) = LatLngQuad(
 @Composable
 private fun Controls(
     state: RadarMapState,
-    onSelect: (Int) -> Unit,
-    onSelectTime: (Instant) -> Unit,
-    onTogglePlay: () -> Unit,
+    onSelectTime: (Instant?) -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier,
 ) {
@@ -244,37 +234,6 @@ private fun Controls(
                 }
                 else -> {
                     val frame = frames.frames[state.index]
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        FilledIconButton(onClick = onTogglePlay) {
-                            Icon(
-                                painterResource(if (state.playing) R.drawable.ic_pause else R.drawable.ic_play),
-                                contentDescription = stringResource(if (state.playing) R.string.map_pause else R.string.map_play),
-                            )
-                        }
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                clock.format(frame.time.atZone(ZoneId.systemDefault())),
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                            Text(
-                                frameLabel(frame.time, frame.observed, frames.issuedAt),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        if (state.loading) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                    }
-                    val sliderLabel = stringResource(R.string.map_time_slider)
-                    Slider(
-                        value = state.index.toFloat(),
-                        onValueChange = { onSelect(it.toInt()) },
-                        valueRange = 0f..(frames.frames.size - 1).coerceAtLeast(1).toFloat(),
-                        steps = (frames.frames.size - 2).coerceAtLeast(0),
-                        modifier = Modifier.semantics { contentDescription = sliderLabel },
-                    )
-                    Legend(frames.legend.map { Color(it.argb) })
                     state.forecast?.let { cached ->
                         SyncedGraph(cached.forecast, frame.time, onSelectTime)
                     }
@@ -292,7 +251,7 @@ private fun Controls(
 
 /** The home screen's 2-hour graph, its marker following the map frame. Sliding it moves the map. */
 @Composable
-private fun SyncedGraph(forecast: RainForecast, frameTime: Instant, onSelectTime: (Instant) -> Unit) {
+private fun SyncedGraph(forecast: RainForecast, frameTime: Instant, onSelectTime: (Instant?) -> Unit) {
     val upcoming = forecast.remainingAt(Instant.now()) ?: return
     val stepSeconds = upcoming.step.seconds.coerceAtLeast(1)
     val offset = Duration.between(upcoming.issuedAt, frameTime).seconds
@@ -304,7 +263,7 @@ private fun SyncedGraph(forecast: RainForecast, frameTime: Instant, onSelectTime
         summary = stringResource(R.string.map_graph_description),
         graphHeight = 96.dp,
         selectedIndex = index,
-        onSelect = { i -> if (i != null) onSelectTime(upcoming.timeOf(i)) },
+        onSelect = { i -> onSelectTime(i?.let(upcoming::timeOf)) },
         modifier = Modifier.fillMaxWidth(),
     )
 }
@@ -316,30 +275,6 @@ internal fun frameLabel(time: Instant, observed: Boolean, issuedAt: Instant): St
         observed && minutes == 0 -> stringResource(R.string.map_now)
         observed -> stringResource(R.string.map_observed_ago, -minutes)
         else -> stringResource(R.string.map_forecast_in, minutes)
-    }
-}
-
-@Composable
-private fun Legend(colors: List<Color>) {
-    if (colors.isEmpty()) return
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(stringResource(R.string.map_legend_light), style = MaterialTheme.typography.labelSmall)
-        Canvas(
-            Modifier
-                .weight(1f)
-                .height(8.dp),
-        ) {
-            val w = size.width / colors.size
-            colors.forEachIndexed { i, c ->
-                drawRoundRect(
-                    color = c.copy(alpha = 1f),
-                    topLeft = androidx.compose.ui.geometry.Offset(i * w, 0f),
-                    size = androidx.compose.ui.geometry.Size(w - 2f, size.height),
-                    cornerRadius = CornerRadius(3f, 3f),
-                )
-            }
-        }
-        Text(stringResource(R.string.map_legend_heavy), style = MaterialTheme.typography.labelSmall)
     }
 }
 

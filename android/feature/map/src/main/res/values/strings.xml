@@ -2,20 +2,15 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:locale="nl">
     <string name="map_title">Radarkaart</string>
     <string name="map_back">Terug</string>
-    <string name="map_play">Afspelen</string>
-    <string name="map_pause">Pauzeren</string>
     <string name="map_loading">Radarbeelden laden…</string>
     <string name="map_observed">Gemeten</string>
     <string name="map_now">Nu</string>
     <string name="map_forecast_in">Verwachting, over %1$d min</string>
     <string name="map_observed_ago">Gemeten, %1$d min geleden</string>
-    <string name="map_legend_light">licht</string>
-    <string name="map_legend_heavy">zwaar</string>
     <string name="map_error">De radarbeelden zijn nu niet te laden.</string>
     <string name="map_unavailable">Deze build heeft geen relay-sleutel, dus er is geen radar om te tonen.</string>
     <string name="map_retry">Opnieuw</string>
     <string name="map_attribution">Radardata: KNMI, CC BY 4.0 · Kaart: Kadaster / PDOK</string>
-    <string name="map_time_slider">Tijdstip van het radarbeeld</string>
     <string name="map_graph_description">Regen de komende 2 uur op jouw plek</string>
     <string name="map_preview_title">Radar</string>
     <string name="map_preview_open">Open de radarkaart</string>

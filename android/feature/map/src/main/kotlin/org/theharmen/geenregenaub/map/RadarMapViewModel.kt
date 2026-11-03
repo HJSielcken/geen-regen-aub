@@ -53,6 +53,7 @@ class RadarMapViewModel(application: Application) : AndroidViewModel(application
 
     private var loadJob: Job? = null
     private var playJob: Job? = null
+    private var resumeJob: Job? = null
     private var autoplayed = false
 
     init {
@@ -103,28 +104,38 @@ class RadarMapViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun select(index: Int) {
-        pause()
-        _state.update { it.copy(index = index.coerceIn(0, (it.frames?.frames?.size ?: 1) - 1)) }
-    }
-
-    /** Jumps to the frame closest to [time], e.g. when sliding along the rain graph. */
-    fun selectTime(time: Instant) {
+    /**
+     * Jumps to the frame closest to [time], e.g. when sliding along the rain graph. The animation
+     * holds there for a moment, then carries on by itself; `null` (the marker tapped off) resumes now.
+     */
+    fun selectTime(time: Instant?) {
+        if (time == null) {
+            resume()
+            return
+        }
         val frames = _state.value.frames?.frames ?: return
         val index = frames.indices.minByOrNull { kotlin.math.abs(Duration.between(frames[it].time, time).seconds) }
             ?: return
-        select(index)
+        pause()
+        _state.update { it.copy(index = index) }
+        resumeJob?.cancel()
+        resumeJob = viewModelScope.launch {
+            delay(RESUME_AFTER_MS)
+            resume()
+        }
     }
 
-    /** Starts the animation once, when the first picture is in. A pause by the user sticks. */
+    /** Starts the animation once, when the first picture is in. */
     fun autoplay() {
         if (autoplayed || !_state.value.isReady) return
         autoplayed = true
         if (playJob?.isActive != true) play()
     }
 
-    fun togglePlay() {
-        if (playJob?.isActive == true) pause() else play()
+    private fun resume() {
+        resumeJob?.cancel()
+        resumeJob = null
+        if (playJob?.isActive != true && _state.value.isReady) play()
     }
 
     private fun play() {
@@ -158,5 +169,6 @@ class RadarMapViewModel(application: Application) : AndroidViewModel(application
         const val PARALLEL_DOWNLOADS = 4
         const val FRAME_MS = 450L
         const val END_PAUSE_MS = 1_200L
+        const val RESUME_AFTER_MS = 3_000L
     }
 }
