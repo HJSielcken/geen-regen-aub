@@ -61,8 +61,9 @@ class HourlyWeatherWidget : GlanceAppWidget() {
         val context = LocalContext.current
         val size = LocalSize.current
         val level = when {
-            size.height >= HEIGHTS[2] -> Level.TITLED
-            size.height >= HEIGHTS[1] -> Level.FULL
+            size.height >= HEIGHTS[3] -> Level.TITLED
+            size.height >= HEIGHTS[2] -> Level.FULL
+            size.height >= HEIGHTS[1] -> Level.WIND
             else -> Level.SMALL
         }
         WidgetSurface(
@@ -107,43 +108,59 @@ class HourlyWeatherWidget : GlanceAppWidget() {
     @Composable
     private fun RowScope.HourCell(hour: HourWeather, label: String, level: Level) {
         val palette = LocalWidgetPalette.current
-        val small = level == Level.SMALL
+        val compact = level == Level.SMALL || level == Level.WIND
         Column(modifier = GlanceModifier.defaultWeight(), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = label,
                 maxLines = 1,
-                style = TextStyle(color = palette.textVariant, fontSize = if (small) 11.sp else 12.sp, textAlign = TextAlign.Center),
+                style = TextStyle(color = palette.textVariant, fontSize = if (compact) 11.sp else 12.sp, textAlign = TextAlign.Center),
             )
             Image(
                 provider = ImageProvider(hour.condition.icon(hour.isDay)),
                 contentDescription = hour.condition.dutch(hour.isDay),
-                modifier = GlanceModifier.size(if (small) 24.dp else if (level == Level.TITLED) 40.dp else 28.dp),
+                modifier = GlanceModifier.size(
+                    when (level) {
+                        Level.SMALL, Level.WIND -> 24.dp
+                        Level.FULL -> 28.dp
+                        Level.TITLED -> 36.dp
+                    },
+                ),
             )
             Text(
                 text = formatTemperature(hour.temperature),
                 maxLines = 1,
                 style = TextStyle(
                     color = palette.text,
-                    fontSize = if (small) 13.sp else 15.sp,
+                    fontSize = if (compact) 13.sp else 15.sp,
                     fontWeight = FontWeight.Medium,
                     textAlign = TextAlign.Center,
                 ),
             )
-            if (!small) {
+            if (level == Level.FULL || level == Level.TITLED) {
                 Text(
                     text = rainChance(hour.precipitationProbability).ifEmpty { " " },
                     maxLines = 1,
                     style = TextStyle(color = palette.accent, fontSize = 11.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center),
                 )
             }
+            if (level != Level.SMALL) {
+                // Direction and Beaufort, "ZW 4", as in the app's hour strip.
+                Text(
+                    text = WeatherFormat.wind(hour.windSpeedKmh, hour.windDirectionDegrees) ?: " ",
+                    maxLines = 1,
+                    style = TextStyle(color = palette.textVariant, fontSize = 10.sp, textAlign = TextAlign.Center),
+                )
+            }
         }
     }
 
-    private enum class Level { SMALL, FULL, TITLED }
+    /** What fits: SMALL has no extras, WIND adds the wind, FULL also the rain chance, TITLED a title. */
+    private enum class Level { SMALL, WIND, FULL, TITLED }
 
     private companion object {
-        val WIDTHS = listOf(150.dp, 220.dp, 290.dp, 360.dp, 430.dp)
-        val HEIGHTS = listOf(64.dp, 86.dp, 150.dp)
+        // 4 × 4 sizes: Android allows at most 16 layouts per widget.
+        val WIDTHS = listOf(150.dp, 230.dp, 320.dp, 410.dp)
+        val HEIGHTS = listOf(64.dp, 84.dp, 104.dp, 150.dp)
 
         /** About 46 dp per hour, from 3 hours on a narrow widget to 9 on a wide one. */
         fun cellCount(width: Dp): Int = ((width - 20.dp).value / 46f).toInt().coerceIn(3, 9)
