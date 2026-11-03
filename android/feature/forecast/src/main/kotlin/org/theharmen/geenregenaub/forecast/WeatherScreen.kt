@@ -1,5 +1,6 @@
 package org.theharmen.geenregenaub.forecast
 
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -197,22 +198,45 @@ private fun CurrentBlock(forecast: WeatherForecast, now: Instant, today: LocalDa
         }
 
         val facts = buildList {
-            WeatherFormat.windLong(current?.windSpeedKmh, current?.windDirectionDegrees)?.let {
-                add(Fact(stringResource(R.string.weather_wind), it))
+            WeatherFormat.wind(current?.windSpeedKmh, current?.windDirectionDegrees)?.let {
+                add(Fact(R.drawable.ic_fact_wind, stringResource(R.string.weather_wind), "$it Bft"))
             }
-            current?.windGustsKmh?.let { add(Fact(stringResource(R.string.weather_gusts), WeatherFormat.kmh(it))) }
-            current?.humidityPercent?.let { add(Fact(stringResource(R.string.weather_humidity), WeatherFormat.percent(it))) }
+            current?.windGustsKmh?.let { add(Fact(R.drawable.ic_fact_gust, stringResource(R.string.weather_gusts), WeatherFormat.kmh(it))) }
+            current?.humidityPercent?.let { add(Fact(R.drawable.ic_fact_humidity, stringResource(R.string.weather_humidity), WeatherFormat.percent(it))) }
             val sunrise = day?.sunrise
             val sunset = day?.sunset
             if (sunrise != null && sunset != null) {
-                add(Fact(stringResource(R.string.weather_sun), "${WeatherFormat.time(sunrise, zone)} / ${WeatherFormat.time(sunset, zone)}"))
+                add(Fact(R.drawable.ic_fact_sunrise, stringResource(R.string.weather_sunrise), WeatherFormat.time(sunrise, zone)))
+                add(Fact(R.drawable.ic_fact_sunset, stringResource(R.string.weather_sunset), WeatherFormat.time(sunset, zone)))
             }
         }
         if (facts.isNotEmpty()) FactGrid(facts)
     }
 }
 
-private data class Fact(val label: String, val value: String)
+/** A value behind its icon; the label is read out by TalkBack instead of shown. */
+private data class Fact(@DrawableRes val icon: Int, val label: String, val value: String)
+
+@Composable
+private fun FactItem(fact: Fact, modifier: Modifier = Modifier, large: Boolean = false) {
+    Row(
+        modifier = modifier.semantics(mergeDescendants = true) { contentDescription = "${fact.label}: ${fact.value}" },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            painter = painterResource(fact.icon),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(if (large) 22.dp else 18.dp),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = fact.value,
+            style = if (large) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodyMedium,
+            maxLines = 1,
+        )
+    }
+}
 
 @Composable
 private fun FactGrid(facts: List<Fact>) {
@@ -221,19 +245,10 @@ private fun FactGrid(facts: List<Fact>) {
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            facts.chunked(2).forEach { pair ->
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    pair.forEach { fact ->
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                text = fact.label,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Text(text = fact.value, style = MaterialTheme.typography.titleSmall)
-                        }
-                    }
-                    if (pair.size == 1) Spacer(Modifier.weight(1f))
+            facts.chunked(3).forEach { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    row.forEach { fact -> FactItem(fact, Modifier.weight(1f), large = true) }
+                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         }
@@ -441,27 +456,23 @@ private fun DayDetail(day: DayWeather, hours: List<HourWeather>, zone: ZoneId) {
         if (hours.isNotEmpty()) HourStrip(hours, zone, firstIsNow = false)
         val facts = buildList {
             WeatherFormat.wind(day.windSpeedMaxKmh, day.windDirectionDegrees)?.let {
-                add(Fact(stringResource(R.string.weather_wind), "$it Bft"))
+                add(Fact(R.drawable.ic_fact_wind, stringResource(R.string.weather_wind), "$it Bft"))
             }
-            day.windGustsMaxKmh?.let { add(Fact(stringResource(R.string.weather_gusts), WeatherFormat.kmh(it))) }
-            day.precipitationMm?.let { add(Fact(stringResource(R.string.weather_rain_amount), WeatherFormat.mm(it))) }
-            day.precipitationProbability?.let { add(Fact(stringResource(R.string.weather_rain_chance), WeatherFormat.percent(it))) }
+            day.windGustsMaxKmh?.let { add(Fact(R.drawable.ic_fact_gust, stringResource(R.string.weather_gusts), WeatherFormat.kmh(it))) }
+            day.precipitationMm?.let { add(Fact(R.drawable.ic_fact_rain, stringResource(R.string.weather_rain_amount), WeatherFormat.mm(it))) }
+            day.precipitationProbability?.let { add(Fact(R.drawable.ic_fact_rain_chance, stringResource(R.string.weather_rain_chance), WeatherFormat.percent(it))) }
             val sunrise = day.sunrise
             val sunset = day.sunset
             if (sunrise != null && sunset != null) {
-                add(Fact(stringResource(R.string.weather_sun), "${WeatherFormat.time(sunrise, zone)} / ${WeatherFormat.time(sunset, zone)}"))
+                add(Fact(R.drawable.ic_fact_sunrise, stringResource(R.string.weather_sunrise), WeatherFormat.time(sunrise, zone)))
+                add(Fact(R.drawable.ic_fact_sunset, stringResource(R.string.weather_sunset), WeatherFormat.time(sunset, zone)))
             }
-            day.uvIndexMax?.let { add(Fact(stringResource(R.string.weather_uv), String.format(java.util.Locale.ROOT, "%.0f", it))) }
+            day.uvIndexMax?.let { add(Fact(R.drawable.ic_fact_uv, stringResource(R.string.weather_uv), String.format(java.util.Locale.ROOT, "%.0f", it))) }
         }
         Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             facts.chunked(3).forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    row.forEach { fact ->
-                        Column(Modifier.weight(1f)) {
-                            Text(fact.label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(fact.value, style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
+                    row.forEach { fact -> FactItem(fact, Modifier.weight(1f)) }
                     repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
