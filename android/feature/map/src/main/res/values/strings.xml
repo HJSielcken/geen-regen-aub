@@ -10,7 +10,7 @@
     <string name="map_error">De radarbeelden zijn nu niet te laden.</string>
     <string name="map_unavailable">Deze build heeft geen relay-sleutel, dus er is geen radar om te tonen.</string>
     <string name="map_retry">Opnieuw</string>
-    <string name="map_attribution">Radardata: KNMI, CC BY 4.0 · Kaart: Kadaster / PDOK</string>
+    <string name="map_attribution">Radardata: KNMI, CC BY 4.0 · Kaart: OpenFreeMap © OpenMapTiles, data © OpenStreetMap</string>
     <string name="map_graph_description">Regen de komende 2 uur op jouw plek</string>
     <string name="map_preview_title">Radar</string>
     <string name="map_preview_open">Open de radarkaart</string>

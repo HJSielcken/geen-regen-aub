@@ -54,6 +54,7 @@ import org.maplibre.android.maps.Style
 import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.PropertyFactory
 import org.maplibre.android.style.layers.RasterLayer
+import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.android.style.sources.ImageSource
 import org.maplibre.geojson.Point
@@ -130,16 +131,18 @@ internal fun RadarMap(state: RadarMapState, dark: Boolean, modifier: Modifier, i
         }
     }
 
+    var fallback by remember { mutableStateOf<MapView.OnDidFailLoadingMapListener?>(null) }
+
     // Base map and pin layer; redone when the theme changes.
     LaunchedEffect(mapView, dark) {
         mapView.getMapAsync { map ->
             map.uiSettings.isRotateGesturesEnabled = false
             map.uiSettings.isTiltGesturesEnabled = false
             if (!interactive) map.uiSettings.setAllGesturesEnabled(false)
-            map.setMinZoomPreference(5.0)
+            map.setMinZoomPreference(if (interactive) 2.0 else 5.0)
             map.setMaxZoomPreference(12.0)
             style = null
-            map.setStyle(Style.Builder().fromJson(BaseMap.styleJson(dark))) { loaded ->
+            val onLoaded = Style.OnStyleLoaded { loaded ->
                 loaded.addSource(GeoJsonSource(PIN_SOURCE))
                 loaded.addLayer(
                     CircleLayer(PIN_LAYER, PIN_SOURCE).withProperties(
@@ -151,6 +154,14 @@ internal fun RadarMap(state: RadarMapState, dark: Boolean, modifier: Modifier, i
                 )
                 style = loaded
             }
+            // The worldwide style lives on OpenFreeMap; if it will not load, use the Dutch PDOK map.
+            fallback?.let(mapView::removeOnDidFailLoadingMapListener)
+            fallback = MapView.OnDidFailLoadingMapListener {
+                fallback?.let(mapView::removeOnDidFailLoadingMapListener)
+                fallback = null
+                if (style == null) map.setStyle(Style.Builder().fromJson(BaseMap.fallbackJson(dark)), onLoaded)
+            }.also(mapView::addOnDidFailLoadingMapListener)
+            map.setStyle(Style.Builder().fromUri(BaseMap.styleUri(dark)), onLoaded)
         }
     }
 
@@ -190,7 +201,8 @@ internal fun RadarMap(state: RadarMapState, dark: Boolean, modifier: Modifier, i
                     PropertyFactory.rasterFadeDuration(0f),
                     PropertyFactory.rasterResampling("nearest"),
                 ),
-                PIN_LAYER,
+                // Below the place names (if the style has any), so towns stay readable through rain.
+                s.layers.firstOrNull { it is SymbolLayer }?.id ?: PIN_LAYER,
             )
         } else {
             source.setImage(image)
