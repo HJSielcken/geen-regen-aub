@@ -67,8 +67,9 @@ class HourlyWeatherWidget : GlanceAppWidget() {
         }
         WidgetSurface(
             GlanceModifier
-                .padding(horizontal = 10.dp, vertical = if (level == Level.SMALL) 4.dp else 10.dp)
+                .padding(horizontal = 10.dp, vertical = if (level == Level.TITLED) 10.dp else 4.dp)
                 .clickable(actionStartActivity(open)),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             if (state == null || state.hours.isEmpty()) {
                 WeatherNoData()
@@ -116,7 +117,7 @@ class HourlyWeatherWidget : GlanceAppWidget() {
             Image(
                 provider = ImageProvider(hour.condition.icon(hour.isDay)),
                 contentDescription = hour.condition.dutch(hour.isDay),
-                modifier = GlanceModifier.size(if (small) 24.dp else if (level == Level.TITLED) 40.dp else 32.dp),
+                modifier = GlanceModifier.size(if (small) 24.dp else if (level == Level.TITLED) 40.dp else 28.dp),
             )
             Text(
                 text = formatTemperature(hour.temperature),
@@ -142,7 +143,7 @@ class HourlyWeatherWidget : GlanceAppWidget() {
 
     private companion object {
         val WIDTHS = listOf(150.dp, 220.dp, 290.dp, 360.dp, 430.dp)
-        val HEIGHTS = listOf(64.dp, 104.dp, 150.dp)
+        val HEIGHTS = listOf(64.dp, 86.dp, 150.dp)
 
         /** About 46 dp per hour, from 3 hours on a narrow widget to 9 on a wide one. */
         fun cellCount(width: Dp): Int = ((width - 20.dp).value / 46f).toInt().coerceIn(3, 9)
