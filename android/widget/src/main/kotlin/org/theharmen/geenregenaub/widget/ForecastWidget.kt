@@ -7,7 +7,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
-import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
@@ -60,12 +59,13 @@ class ForecastWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        val look = WidgetLook.load(context)
         val weather = runCatching { WeatherData.repository(context).latest() }.getOrNull()
         val state = ForecastWidgetState.of(weather, Instant.now(), ZoneId.systemDefault())
         val open = WeatherActivity.intent(context).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
         provideContent {
-            GlanceTheme {
+            WidgetTheme(look) {
                 Content(state, open)
             }
         }
@@ -73,11 +73,12 @@ class ForecastWidget : GlanceAppWidget() {
 
     @Composable
     private fun Content(state: ForecastWidgetState?, open: Intent) {
+        val palette = LocalWidgetPalette.current
         val context = LocalContext.current
         val size = LocalSize.current
         val modifier = GlanceModifier
             .fillMaxSize()
-            .background(GlanceTheme.colors.widgetBackground)
+            .background(palette.background)
             .cornerRadius(20.dp)
             .padding(horizontal = 14.dp, vertical = 10.dp)
             .clickable(actionStartActivity(open))
@@ -86,11 +87,11 @@ class ForecastWidget : GlanceAppWidget() {
             if (state == null) {
                 Text(
                     text = context.getString(R.string.forecast_widget_no_data),
-                    style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 15.sp, fontWeight = FontWeight.Bold),
+                    style = TextStyle(color = palette.text, fontSize = 15.sp, fontWeight = FontWeight.Bold),
                 )
                 Text(
                     text = context.getString(R.string.forecast_widget_no_data_detail),
-                    style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 13.sp),
+                    style = TextStyle(color = palette.textVariant, fontSize = 13.sp),
                 )
                 return@Column
             }
@@ -123,13 +124,14 @@ class ForecastWidget : GlanceAppWidget() {
             Text(
                 text = if (wide) state.footer else "${state.placeName} · ${state.footer}",
                 maxLines = 1,
-                style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 11.sp),
+                style = TextStyle(color = palette.textVariant, fontSize = 11.sp),
             )
         }
     }
 
     @Composable
     private fun Header(state: ForecastWidgetState, wide: Boolean) {
+        val palette = LocalWidgetPalette.current
         Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Image(
                 provider = ImageProvider(state.condition.icon(state.isDay)),
@@ -140,12 +142,12 @@ class ForecastWidget : GlanceAppWidget() {
             Column(modifier = GlanceModifier.defaultWeight()) {
                 Text(
                     text = formatTemperature(state.temperature),
-                    style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 30.sp, fontWeight = FontWeight.Medium),
+                    style = TextStyle(color = palette.text, fontSize = 30.sp, fontWeight = FontWeight.Medium),
                 )
                 Text(
                     text = state.condition.dutch(state.isDay),
                     maxLines = 1,
-                    style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 13.sp),
+                    style = TextStyle(color = palette.textVariant, fontSize = 13.sp),
                 )
             }
             if (wide) {
@@ -153,12 +155,12 @@ class ForecastWidget : GlanceAppWidget() {
                     Text(
                         text = state.placeName,
                         maxLines = 1,
-                        style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End),
+                        style = TextStyle(color = palette.text, fontSize = 14.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End),
                     )
                     state.today?.let { today ->
                         Text(
                             text = "↑${formatTemperature(today.temperatureMax)} ↓${formatTemperature(today.temperatureMin)}",
-                            style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 13.sp, textAlign = TextAlign.End),
+                            style = TextStyle(color = palette.textVariant, fontSize = 13.sp, textAlign = TextAlign.End),
                         )
                     }
                 }
@@ -168,8 +170,9 @@ class ForecastWidget : GlanceAppWidget() {
 
     @Composable
     private fun RowScope.HourCell(hour: HourWeather, label: String) {
+        val palette = LocalWidgetPalette.current
         Column(modifier = GlanceModifier.defaultWeight(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(label, style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 12.sp, textAlign = TextAlign.Center))
+            Text(label, style = TextStyle(color = palette.textVariant, fontSize = 12.sp, textAlign = TextAlign.Center))
             Image(
                 provider = ImageProvider(hour.condition.icon(hour.isDay)),
                 contentDescription = null,
@@ -177,17 +180,18 @@ class ForecastWidget : GlanceAppWidget() {
             )
             Text(
                 text = formatTemperature(hour.temperature),
-                style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center),
+                style = TextStyle(color = palette.text, fontSize = 14.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center),
             )
             Text(
                 text = hour.precipitationProbability?.takeIf { it >= 10 }?.let(WeatherFormat::percent) ?: " ",
-                style = TextStyle(color = GlanceTheme.colors.primary, fontSize = 11.sp, textAlign = TextAlign.Center),
+                style = TextStyle(color = palette.accent, fontSize = 11.sp, textAlign = TextAlign.Center),
             )
         }
     }
 
     @Composable
     private fun DayRow(day: DayWeather, state: ForecastWidgetState) {
+        val palette = LocalWidgetPalette.current
         val context = LocalContext.current
         val label = WeatherFormat.day(
             day.date,
@@ -200,12 +204,12 @@ class ForecastWidget : GlanceAppWidget() {
                 text = label,
                 maxLines = 1,
                 modifier = GlanceModifier.defaultWeight(),
-                style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 13.sp),
+                style = TextStyle(color = palette.text, fontSize = 13.sp),
             )
             Text(
                 text = day.precipitationProbability?.takeIf { it >= 10 }?.let(WeatherFormat::percent) ?: "",
                 modifier = GlanceModifier.width(36.dp),
-                style = TextStyle(color = GlanceTheme.colors.primary, fontSize = 11.sp, textAlign = TextAlign.End),
+                style = TextStyle(color = palette.accent, fontSize = 11.sp, textAlign = TextAlign.End),
             )
             Image(
                 provider = ImageProvider(day.condition.icon()),
@@ -215,12 +219,12 @@ class ForecastWidget : GlanceAppWidget() {
             Text(
                 text = formatTemperature(day.temperatureMin),
                 modifier = GlanceModifier.width(34.dp),
-                style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 13.sp, textAlign = TextAlign.End),
+                style = TextStyle(color = palette.textVariant, fontSize = 13.sp, textAlign = TextAlign.End),
             )
             Text(
                 text = formatTemperature(day.temperatureMax),
                 modifier = GlanceModifier.width(36.dp),
-                style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End),
+                style = TextStyle(color = palette.text, fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End),
             )
         }
     }

@@ -28,4 +28,15 @@
     <string name="settings_theme_dark">Donker</string>
     <string name="settings_dynamic_color">Kleuren van je achtergrond</string>
     <string name="settings_dynamic_color_detail">Uit: het eigen blauw van Geen regen aub</string>
+
+    <string name="settings_section_widgets">Widgets</string>
+    <string name="settings_widget_background">Achtergrond</string>
+    <string name="settings_widget_background_solid">Normaal</string>
+    <string name="settings_widget_background_translucent">Doorschijnend</string>
+    <string name="settings_widget_background_transparent">Transparant</string>
+    <string name="settings_widget_text_color">Tekstkleur</string>
+    <string name="settings_widget_text_auto">Automatisch</string>
+    <string name="settings_widget_background_color">Achtergrondkleur</string>
+    <string name="settings_widget_color_theme">Thema</string>
+    <string name="settings_widget_background_detail">Thema volgt de weergave hierboven. Automatisch kiest een tekstkleur die goed leesbaar is op de achtergrond.</string>
 </resources>

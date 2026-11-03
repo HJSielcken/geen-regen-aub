@@ -24,6 +24,7 @@ android {
 dependencies {
     implementation(project(":core:domain"))
     implementation(project(":core:data"))
+    implementation(project(":core:ui"))
     implementation(project(":feature:alerts"))
     implementation(project(":feature:forecast"))
     implementation(libs.androidx.core.ktx)
