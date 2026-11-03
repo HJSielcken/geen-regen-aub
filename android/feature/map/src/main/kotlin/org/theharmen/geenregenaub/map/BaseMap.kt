@@ -9,9 +9,9 @@ internal object BaseMap {
     private const val TILES = "https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/grijs/EPSG:3857/{z}/{x}/{y}.png"
 
     fun styleJson(dark: Boolean): String {
-        val background = if (dark) "#1b1d21" else "#eef0f2"
+        val background = if (dark) "#2b2e33" else "#eef0f2"
         val paint = if (dark) {
-            """{"raster-brightness-min":1,"raster-brightness-max":0.12,"raster-saturation":-1,"raster-contrast":0.1}"""
+            """{"raster-brightness-min":1,"raster-brightness-max":0.28,"raster-saturation":-1,"raster-contrast":0.1}"""
         } else {
             """{"raster-opacity":0.9}"""
         }
