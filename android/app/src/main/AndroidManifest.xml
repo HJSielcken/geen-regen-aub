@@ -27,5 +27,15 @@
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
         </activity>
+
+        <!-- Opened from the "Crashrapport" shortcut; runs in its own process so it opens even
+             when the app itself crashes on start. -->
+        <activity
+            android:name=".CrashReportActivity"
+            android:exported="true"
+            android:label="@string/shortcut_crash_long"
+            android:process=":crashreport"
+            android:taskAffinity=".crashreport"
+            android:excludeFromRecents="true" />
     </application>
 </manifest>

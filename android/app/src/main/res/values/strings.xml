@@ -3,4 +3,9 @@
     <string name="app_name">Geen regen aub</string>
     <string name="shortcut_settings_short">Instellingen</string>
     <string name="shortcut_settings_long">Regenmeldingen instellen</string>
+    <string name="shortcut_crash_short">Crashrapport</string>
+    <string name="shortcut_crash_long">Laatste crash bekijken</string>
+    <string name="crash_report_none">Geen crash opgeslagen.</string>
+    <string name="crash_report_share">Delen</string>
+    <string name="crash_report_clear">Wissen</string>
 </resources>

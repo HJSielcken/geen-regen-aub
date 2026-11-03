@@ -15,3 +15,10 @@
 -keep class org.theharmen.geenregenaub.** extends androidx.work.ListenableWorker {
     <init>(android.content.Context, androidx.work.WorkerParameters);
 }
+
+# WorkManager keeps its jobs in a Room database. Room creates WorkDatabase_Impl by name, through
+# reflection, so R8 cannot see that it is ever constructed. Without these rules R8 merged
+# RoomDatabase into WorkDatabase and dropped WorkDatabase_Impl's constructor, and the app crashed
+# on start (in WorkManager's start-up provider, before Sentry runs). 0.1.0 shipped like that.
+-keep class androidx.room.RoomDatabase
+-keep class * extends androidx.room.RoomDatabase { <init>(); }

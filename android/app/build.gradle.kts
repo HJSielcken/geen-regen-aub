@@ -187,3 +187,26 @@ val reportApkSize = tasks.register("reportApkSize") {
 tasks.matching { task -> task.name == "assembleRelease" || task.name == "assembleDebug" }.configureEach {
     finalizedBy(reportApkSize)
 }
+
+// Classes that are only ever created by name, through reflection. If R8 drops their constructor
+// the app crashes on start, before Sentry runs (that is what happened in 0.1.0), so check the R8
+// mapping of every release build and fail the build instead.
+val verifyReflectionKeeps = tasks.register("verifyReflectionKeeps") {
+    val mapping = layout.buildDirectory.file("outputs/mapping/release/mapping.txt")
+    doLast {
+        val lines = mapping.get().asFile.readLines()
+        for (name in listOf("androidx.work.impl.WorkDatabase_Impl")) {
+            val start = lines.indexOfFirst { line -> line.startsWith("$name -> ") }
+            check(start >= 0) { "R8 removed $name; see app/proguard-rules.pro" }
+            val members = lines.drop(start + 1).takeWhile { line -> line.startsWith(" ") || line.startsWith("#") }
+            println("R8 mapping for $name:")
+            members.filter { line -> line.contains("<init>") }.forEach { line -> println("  ${line.trim()}") }
+            check(members.any { line -> line.contains(" <init>() ") || line.trim().startsWith("void <init>()") || line.contains(":void <init>()") }) {
+                "R8 removed the constructor of $name; Room creates it by reflection. See app/proguard-rules.pro"
+            }
+        }
+    }
+}
+tasks.matching { task -> task.name == "assembleRelease" }.configureEach {
+    finalizedBy(verifyReflectionKeeps)
+}
