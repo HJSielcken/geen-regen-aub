@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.glance.ColorFilter
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
@@ -70,6 +71,7 @@ class CurrentWeatherWidget : GlanceAppWidget() {
             GlanceModifier
                 .padding(horizontal = 14.dp, vertical = if (short) 6.dp else 12.dp)
                 .clickable(actionStartActivity(open)),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             if (state == null) {
                 WeatherNoData()
@@ -147,36 +149,53 @@ class CurrentWeatherWidget : GlanceAppWidget() {
         )
     }
 
-    /** Wind, humidity and sunrise/sunset, like the facts card in the app. */
+    /** Wind, gusts, humidity and sunrise/sunset, each behind its own icon. */
     @Composable
     private fun Facts(state: WeatherWidgetState) {
         val context = LocalContext.current
-        val facts = buildList {
+        val first = buildList {
             WeatherFormat.wind(state.windSpeedKmh, state.windDirectionDegrees)?.let {
-                add(context.getString(R.string.forecast_widget_wind) to "$it Bft")
+                add(Fact(R.drawable.ic_widget_wind, context.getString(R.string.forecast_widget_wind), "$it Bft"))
             }
-            state.humidityPercent?.let { add(context.getString(R.string.forecast_widget_humidity) to WeatherFormat.percent(it)) }
-            val sunrise = state.today?.sunrise
-            val sunset = state.today?.sunset
-            if (sunrise != null && sunset != null) {
-                add(
-                    context.getString(R.string.forecast_widget_sun) to
-                        "${WeatherFormat.time(sunrise, state.zone)} / ${WeatherFormat.time(sunset, state.zone)}",
-                )
+            state.windGustsKmh?.let {
+                add(Fact(R.drawable.ic_widget_gust, context.getString(R.string.forecast_widget_gusts), WeatherFormat.kmh(it)))
+            }
+            state.humidityPercent?.let {
+                add(Fact(R.drawable.ic_widget_humidity, context.getString(R.string.forecast_widget_humidity), WeatherFormat.percent(it)))
             }
         }
-        if (facts.isEmpty()) return
-        Row(modifier = GlanceModifier.fillMaxWidth()) {
-            facts.forEach { (label, value) -> Fact(label, value) }
+        val second = buildList {
+            state.today?.sunrise?.let {
+                add(Fact(R.drawable.ic_widget_sunrise, context.getString(R.string.forecast_widget_sunrise), WeatherFormat.time(it, state.zone)))
+            }
+            state.today?.sunset?.let {
+                add(Fact(R.drawable.ic_widget_sunset, context.getString(R.string.forecast_widget_sunset), WeatherFormat.time(it, state.zone)))
+            }
+        }
+        // Three to a row, so the columns line up between the rows.
+        listOf(first, second).filter { it.isNotEmpty() }.forEachIndexed { index, row ->
+            if (index > 0) Spacer(GlanceModifier.height(6.dp))
+            Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                row.forEach { FactCell(it) }
+                repeat(3 - row.size) { Spacer(GlanceModifier.defaultWeight()) }
+            }
         }
     }
 
+    private data class Fact(val icon: Int, val label: String, val value: String)
+
     @Composable
-    private fun RowScope.Fact(label: String, value: String) {
+    private fun RowScope.FactCell(fact: Fact) {
         val palette = LocalWidgetPalette.current
-        Column(modifier = GlanceModifier.defaultWeight()) {
-            Text(label, maxLines = 1, style = TextStyle(color = palette.textVariant, fontSize = 11.sp))
-            Text(value, maxLines = 1, style = TextStyle(color = palette.text, fontSize = 13.sp, fontWeight = FontWeight.Medium))
+        Row(modifier = GlanceModifier.defaultWeight(), verticalAlignment = Alignment.CenterVertically) {
+            Image(
+                provider = ImageProvider(fact.icon),
+                contentDescription = fact.label,
+                colorFilter = ColorFilter.tint(palette.textVariant),
+                modifier = GlanceModifier.size(16.dp),
+            )
+            Spacer(GlanceModifier.width(4.dp))
+            Text(fact.value, maxLines = 1, style = TextStyle(color = palette.text, fontSize = 12.sp, fontWeight = FontWeight.Medium))
         }
     }
 }

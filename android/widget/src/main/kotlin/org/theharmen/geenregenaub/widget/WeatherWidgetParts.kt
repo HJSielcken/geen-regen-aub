@@ -7,6 +7,7 @@ import androidx.glance.GlanceModifier
 import androidx.glance.LocalContext
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.background
+import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
 import androidx.glance.layout.ColumnScope
 import androidx.glance.layout.fillMaxSize
@@ -18,9 +19,17 @@ import androidx.glance.text.TextStyle
 internal fun widgetCard(): GlanceModifier = GlanceModifier.fillMaxSize().cornerRadius(20.dp)
 
 @Composable
-internal fun WidgetSurface(modifier: GlanceModifier, content: @Composable ColumnScope.() -> Unit) {
+internal fun WidgetSurface(
+    modifier: GlanceModifier,
+    verticalAlignment: Alignment.Vertical = Alignment.Top,
+    content: @Composable ColumnScope.() -> Unit,
+) {
     val palette = LocalWidgetPalette.current
-    Column(modifier = widgetCard().background(palette.background).then(modifier), content = content)
+    Column(
+        modifier = widgetCard().background(palette.background).then(modifier),
+        verticalAlignment = verticalAlignment,
+        content = content,
+    )
 }
 
 /** Shown until the app has fetched a forecast. */

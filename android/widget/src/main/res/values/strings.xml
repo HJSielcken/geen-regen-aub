@@ -28,7 +28,9 @@
     <string name="forecast_widget_max_min">max %1$s · min %2$s</string>
     <string name="forecast_widget_wind">Wind</string>
     <string name="forecast_widget_humidity">Vochtigheid</string>
-    <string name="forecast_widget_sun">Zon op / onder</string>
+    <string name="forecast_widget_gusts">Windstoten</string>
+    <string name="forecast_widget_sunrise">Zonsopkomst</string>
+    <string name="forecast_widget_sunset">Zonsondergang</string>
     <string name="forecast_widget_no_data">Nog geen weerbericht</string>
     <string name="forecast_widget_no_data_detail">Open de app om je plek te kiezen</string>
     <string name="forecast_widget_now">Nu</string>
