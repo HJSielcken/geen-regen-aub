@@ -15,7 +15,7 @@ Kotlin, Jetpack Compose with Material 3 (dynamic colour), a Glance home-screen w
 | `:feature:alerts` | Rain alert settings screen, notification, settings storage |
 | `:feature:forecast` | Weather forecast screen (now, 24 hours, 10 days), the home screen weather card, Meteocons icons |
 | `:widget` | Glance widgets (rain: verdict + 2-hour graph; weather: now, hours, days, clock) and the 15-minute worker that refreshes, redraws and runs the alert check |
-| `:feature:map` | Animated radar map (MapLibre, PDOK base map, frames from the relay's `/v1/radar`) |
+| `:feature:map` | Animated radar map (MapLibre, OpenFreeMap worldwide base map with PDOK fallback, frames from the relay's `/v1/radar`) |
 
 
 ## Widget and rain alerts
