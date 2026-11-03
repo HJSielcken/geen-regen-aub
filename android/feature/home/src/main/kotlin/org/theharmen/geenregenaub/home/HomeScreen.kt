@@ -79,13 +79,15 @@ import java.time.format.DateTimeFormatter
 
 private val clock = DateTimeFormatter.ofPattern("HH:mm")
 
-/** The home screen: where am I, will it rain, and the two-hour graph. */
+/** The home screen: where am I, will it rain, the two-hour graph, and below that whatever the app adds. */
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
     onOpenSettings: (() -> Unit)? = null,
     onOpenMap: (() -> Unit)? = null,
     viewModel: HomeViewModel = viewModel(),
+    /** Also run on pull to refresh, for whatever [bottomContent] shows. */
+    onRefreshMore: () -> Unit = {},
     /** Extra cards at the bottom of the screen, e.g. the weather forecast summary. */
     bottomContent: @Composable () -> Unit = {},
     radarContent: @Composable () -> Unit = {},
@@ -115,7 +117,10 @@ fun HomeScreen(
     HomeContent(
         state = state,
         hasPermission = hasPermission,
-        onRefresh = { viewModel.refresh() },
+        onRefresh = {
+            viewModel.refresh()
+            onRefreshMore()
+        },
         onRequestPermission = { permissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION) },
         onChoosePlace = { showPlaces = true },
         onOpenSettings = onOpenSettings,

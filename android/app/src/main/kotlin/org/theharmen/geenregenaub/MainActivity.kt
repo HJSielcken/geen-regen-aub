@@ -5,8 +5,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import org.theharmen.geenregenaub.alerts.SettingsActivity
-import org.theharmen.geenregenaub.forecast.WeatherActivity
-import org.theharmen.geenregenaub.forecast.WeatherSummaryCard
+import androidx.lifecycle.viewmodel.compose.viewModel
+import org.theharmen.geenregenaub.forecast.WeatherSections
+import org.theharmen.geenregenaub.forecast.WeatherViewModel
 import org.theharmen.geenregenaub.home.HomeScreen
 import org.theharmen.geenregenaub.map.RadarMapActivity
 import org.theharmen.geenregenaub.map.RadarPreview
@@ -20,9 +21,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             SystemBarsFollowTheme(this)
             GeenRegenTheme {
+                // One scrolling home screen: rain, a radar preview, then the full weather forecast.
+                val weather: WeatherViewModel = viewModel()
                 HomeScreen(
                     onOpenSettings = { startActivity(SettingsActivity.intent(this)) },
-                    bottomContent = { WeatherSummaryCard(onOpen = { startActivity(WeatherActivity.intent(this)) }) },
+                    onRefreshMore = weather::refresh,
+                    bottomContent = { WeatherSections(viewModel = weather) },
                     onOpenMap = { startActivity(RadarMapActivity.intent(this)) },
                     radarContent = { RadarPreview(onOpen = { startActivity(RadarMapActivity.intent(this)) }) },
                 )

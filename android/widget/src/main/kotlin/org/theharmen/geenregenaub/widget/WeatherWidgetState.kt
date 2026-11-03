@@ -13,7 +13,6 @@ import org.theharmen.geenregenaub.data.weather.WeatherData
 import org.theharmen.geenregenaub.domain.DayWeather
 import org.theharmen.geenregenaub.domain.HourWeather
 import org.theharmen.geenregenaub.domain.WeatherCondition
-import org.theharmen.geenregenaub.forecast.WeatherActivity
 import org.theharmen.geenregenaub.forecast.WeatherFormat
 import java.time.Instant
 import java.time.LocalDate
@@ -40,8 +39,10 @@ object WeatherWidgets {
         return WeatherWidgetState.of(weather, Instant.now(), ZoneId.systemDefault())
     }
 
+    /** The weather lives on the home screen now, so the widgets open the app. */
     internal fun openIntent(context: Context): Intent =
-        WeatherActivity.intent(context).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        (context.packageManager.getLaunchIntentForPackage(context.packageName) ?: Intent())
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 }
 
 /** Everything the weather widgets show, worked out before composing. */

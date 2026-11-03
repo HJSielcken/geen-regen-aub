@@ -148,6 +148,7 @@ dependencies {
     implementation(project(":widget"))
 
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.sentry.android.core)
 }
 

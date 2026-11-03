@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools" tools:locale="nl">
-    <string name="weather_title">Weerbericht</string>
-    <string name="weather_back">Terug</string>
-    <string name="weather_loading">Weerbericht ophalen…</string>
     <string name="weather_now">Nu</string>
     <string name="weather_today">Vandaag</string>
     <string name="weather_tomorrow">Morgen</string>
@@ -19,9 +16,6 @@
     <string name="weather_rain_amount">Neerslag</string>
     <string name="weather_uv">UV-index</string>
     <string name="weather_updated">Bijgewerkt %1$s</string>
-    <string name="weather_open">Bekijk het weerbericht</string>
-    <string name="weather_summary_hint">Uur voor uur en de komende dagen</string>
-    <string name="weather_error_no_location">Kies eerst een plaats of geef toegang tot je locatie op het hoofdscherm.</string>
     <string name="weather_error_network">Het weerbericht kan nu niet worden opgehaald. Trek omlaag om het opnieuw te proberen.</string>
     <string name="weather_retry">Opnieuw</string>
     <string name="weather_icons_credit">Iconen: Meteocons door Bas Milius (MIT-licentie)</string>

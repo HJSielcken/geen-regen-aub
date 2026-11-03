@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -23,18 +22,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -75,91 +68,48 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 /**
- * The weather forecast: now, the next 24 hours and the coming days (each day expandable to its
- * hours), then air quality, sun, moon and wind.
+ * The weather forecast as sections for the home screen, under the rain graph: now, the next 24
+ * hours and the coming days (each day expandable to its hours), then air quality, sun, moon and
+ * wind. Shows nothing while the first forecast is still loading.
  */
 @Composable
-fun WeatherScreen(onBack: () -> Unit, viewModel: WeatherViewModel = viewModel()) {
+fun WeatherSections(modifier: Modifier = Modifier, viewModel: WeatherViewModel = viewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { viewModel.keepFresh() }
     }
-    WeatherContent(state, onRefresh = viewModel::refresh, onBack = onBack)
+    WeatherContent(state, onRefresh = viewModel::refresh, modifier = modifier)
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun WeatherContent(
     state: WeatherUiState,
     onRefresh: () -> Unit,
-    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
     zone: ZoneId = ZoneId.systemDefault(),
 ) {
     var showLicence by remember { mutableStateOf(false) }
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = state.weather?.place?.shortName() ?: stringResource(R.string.weather_title),
-                            maxLines = 1,
-                        )
-                        if (state.weather != null) {
-                            Text(
-                                text = stringResource(R.string.weather_title),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = stringResource(R.string.weather_back))
-                    }
-                },
-            )
-        },
-    ) { padding ->
-        PullToRefreshBox(
-            isRefreshing = state.isRefreshing,
-            onRefresh = onRefresh,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-        ) {
-            val weather = state.weather
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                if (weather != null) {
-                    val today = state.now.atZone(zone).toLocalDate()
-                    item { CurrentBlock(weather.forecast, state.now, today, zone) }
-                    item { HoursCard(weather.forecast.hoursFrom(state.now, 24), zone) }
-                    item { DaysCard(weather.forecast, today, zone) }
-                    weather.airQuality?.let { air -> item { AirQualityCard(air, state.now, zone) } }
-                    item { SunCard(weather.forecast, state.now, today, zone) }
-                    item { MoonCard(state.now, today, zone) }
-                    weather.forecast.current?.let { current -> item { WindCard(current) } }
-                } else if (state.isRefreshing || !state.hasLoaded) {
-                    item { Loading() }
-                }
-                state.failure?.let { reason -> item { ErrorCard(reason, onRefresh) } }
-                item {
-                    Footer(weather, zone, onShowLicence = { showLicence = true })
-                }
-            }
+    val weather = state.weather
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        if (weather != null) {
+            val today = state.now.atZone(zone).toLocalDate()
+            CurrentBlock(weather.forecast, state.now, today, zone)
+            HoursCard(weather.forecast.hoursFrom(state.now, 24), zone)
+            DaysCard(weather.forecast, today, zone)
+            weather.airQuality?.let { air -> AirQualityCard(air, state.now, zone) }
+            SunCard(weather.forecast, state.now, today, zone)
+            MoonCard(state.now, today, zone)
+            weather.forecast.current?.let { current -> WindCard(current) }
+        }
+        // The rain side has its own location errors; only say something when the weather alone failed.
+        state.failure?.takeIf { it != FailureReason.NO_LOCATION }?.let { ErrorCard(onRefresh) }
+        if (weather != null || state.failure != null) {
+            Footer(weather, zone, onShowLicence = { showLicence = true })
         }
     }
     if (showLicence) LicenceDialog(onDismiss = { showLicence = false })
 }
-
-/** "Utrecht, Utrecht, Utrecht" → "Utrecht"; same rule as the home screen. */
-internal fun org.theharmen.geenregenaub.data.Place.shortName(): String = name.substringBefore(',').trim()
 
 @Composable
 private fun CurrentBlock(forecast: WeatherForecast, now: Instant, today: LocalDate, zone: ZoneId) {
@@ -480,39 +430,21 @@ private fun DayDetail(day: DayWeather, hours: List<HourWeather>, zone: ZoneId) {
 }
 
 @Composable
-private fun Loading() {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        modifier = Modifier.padding(vertical = 24.dp),
-    ) {
-        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-        Text(stringResource(R.string.weather_loading), style = MaterialTheme.typography.bodyLarge)
-    }
-}
-
-@Composable
-private fun ErrorCard(reason: FailureReason, onRetry: () -> Unit) {
-    val message = when (reason) {
-        FailureReason.NO_LOCATION -> R.string.weather_error_no_location
-        else -> R.string.weather_error_network
-    }
+private fun ErrorCard(onRetry: () -> Unit) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(stringResource(message), color = MaterialTheme.colorScheme.onErrorContainer)
-            if (reason != FailureReason.NO_LOCATION) {
-                OutlinedButton(onClick = onRetry) { Text(stringResource(R.string.weather_retry)) }
-            }
+            Text(stringResource(R.string.weather_error_network), color = MaterialTheme.colorScheme.onErrorContainer)
+            OutlinedButton(onClick = onRetry) { Text(stringResource(R.string.weather_retry)) }
         }
     }
 }
 
 @Composable
 private fun Footer(weather: CachedWeather?, zone: ZoneId, onShowLicence: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(bottom = 16.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(bottom = 8.dp)) {
         val small = MaterialTheme.typography.bodySmall
         val color = MaterialTheme.colorScheme.onSurfaceVariant
         if (weather != null) {
