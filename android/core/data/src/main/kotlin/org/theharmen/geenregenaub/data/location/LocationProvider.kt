@@ -15,9 +15,15 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.Executors
 import kotlin.coroutines.resume
 
+/** A position the phone already knew, and how old it is. */
+internal data class KnownLocation(val lat: Double, val lon: Double, val ageMs: Long)
+
 internal interface LocationProvider {
-    /** A coarse (about 1 km) fix as (lat, lon), or null without permission or a fix. */
-    suspend fun currentLocation(): Pair<Double, Double>?
+    /** The newest position the phone already has, of any age. Never waits; null without permission. */
+    fun lastKnownLocation(): KnownLocation?
+
+    /** A fresh coarse (about 1 km) fix as (lat, lon), waiting up to ~10 s, or null without one. */
+    suspend fun freshLocation(): Pair<Double, Double>?
 }
 
 /**
@@ -32,22 +38,29 @@ internal class CoarseLocationProvider(private val context: Context) : LocationPr
         ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
             PackageManager.PERMISSION_GRANTED
 
-    @SuppressLint("MissingPermission") // checked by hasPermission()
-    override suspend fun currentLocation(): Pair<Double, Double>? {
-        if (manager == null || !hasPermission()) return null
-        val providers = buildList {
+    private fun enabledProviders(): List<String> {
+        if (manager == null) return emptyList()
+        return buildList {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) add(LocationManager.FUSED_PROVIDER)
             add(LocationManager.NETWORK_PROVIDER)
             add(LocationManager.PASSIVE_PROVIDER)
         }.filter { runCatching { manager.isProviderEnabled(it) }.getOrDefault(false) }
+    }
 
-        val recent = providers
+    @SuppressLint("MissingPermission") // checked by hasPermission()
+    override fun lastKnownLocation(): KnownLocation? {
+        if (manager == null || !hasPermission()) return null
+        val newest = enabledProviders()
             .mapNotNull { runCatching { manager.getLastKnownLocation(it) }.getOrNull() }
             .maxByOrNull { it.time }
-            ?.takeIf { System.currentTimeMillis() - it.time < MAX_AGE_MS }
-        if (recent != null) return recent.latitude to recent.longitude
+            ?: return null
+        val age = (System.currentTimeMillis() - newest.time).coerceAtLeast(0)
+        return KnownLocation(newest.latitude, newest.longitude, age)
+    }
 
-        val provider = providers.firstOrNull { it != LocationManager.PASSIVE_PROVIDER } ?: return null
+    override suspend fun freshLocation(): Pair<Double, Double>? {
+        if (manager == null || !hasPermission()) return null
+        val provider = enabledProviders().firstOrNull { it != LocationManager.PASSIVE_PROVIDER } ?: return null
         val fix = withTimeoutOrNull(FIX_TIMEOUT_MS) { requestFix(provider) }
         return fix?.let { it.latitude to it.longitude }
     }
@@ -67,7 +80,6 @@ internal class CoarseLocationProvider(private val context: Context) : LocationPr
     }
 
     private companion object {
-        const val MAX_AGE_MS = 10 * 60 * 1000L
         const val FIX_TIMEOUT_MS = 10_000L
     }
 }

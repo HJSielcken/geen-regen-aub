@@ -115,7 +115,7 @@ fun HomeScreen(
     HomeContent(
         state = state,
         hasPermission = hasPermission,
-        onRefresh = viewModel::refresh,
+        onRefresh = { viewModel.refresh() },
         onRequestPermission = { permissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION) },
         onChoosePlace = { showPlaces = true },
         onOpenSettings = onOpenSettings,
@@ -175,7 +175,7 @@ internal fun HomeContent(
 ) {
     Scaffold(modifier = modifier) { padding ->
         PullToRefreshBox(
-            isRefreshing = state.isRefreshing,
+            isRefreshing = state.showRefreshIndicator,
             onRefresh = onRefresh,
             modifier = Modifier
                 .fillMaxSize()

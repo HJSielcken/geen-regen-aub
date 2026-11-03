@@ -32,6 +32,8 @@ data class HomeUiState(
     val forecast: CachedForecast? = null,
     val settings: LocationSettings = LocationSettings(),
     val isRefreshing: Boolean = false,
+    /** A refresh the user asked for (pull, new place), so the pull-to-refresh spinner shows. */
+    val showRefreshIndicator: Boolean = false,
     val failure: FailureReason? = null,
     val hasLoaded: Boolean = false,
     val favorites: List<Place> = emptyList(),
@@ -43,6 +45,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val places = GeenRegenData.placeRepository(application)
 
     private val refreshing = MutableStateFlow(false)
+    private val userRefreshing = MutableStateFlow(false)
     private val failure = MutableStateFlow<FailureReason?>(null)
     private val loaded = MutableStateFlow(false)
 
@@ -58,10 +61,19 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         clock,
         forecasts.cachedForecast,
         places.settings,
-        combine(refreshing, failure, loaded) { r, f, l -> Triple(r, f, l) },
+        combine(refreshing, userRefreshing, failure, loaded) { r, u, f, l -> RefreshState(r, u, f, l) },
         places.favorites,
-    ) { now, forecast, settings, (isRefreshing, lastFailure, hasLoaded), favorites ->
-        HomeUiState(now, forecast, settings, isRefreshing, lastFailure, hasLoaded || forecast != null, favorites)
+    ) { now, forecast, settings, refresh, favorites ->
+        HomeUiState(
+            now = now,
+            forecast = forecast,
+            settings = settings,
+            isRefreshing = refresh.running,
+            showRefreshIndicator = refresh.byUser,
+            failure = refresh.failure,
+            hasLoaded = refresh.loaded || forecast != null,
+            favorites = favorites,
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
     private val query = MutableStateFlow("")
@@ -87,21 +99,30 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private var refreshJob: Job? = null
 
-    fun refresh() {
+    /**
+     * Fetches a new forecast. [byUser] shows the pull-to-refresh spinner; the automatic refreshes
+     * run quietly behind the cached forecast, which is on screen straight away.
+     */
+    fun refresh(byUser: Boolean = true) {
+        if (byUser) userRefreshing.value = true
         if (refreshJob?.isActive == true) return
         refreshJob = viewModelScope.launch {
             refreshing.value = true
-            val result = forecasts.refresh()
-            failure.value = (result as? RefreshResult.Failure)?.reason
-            refreshing.value = false
-            loaded.value = true
+            try {
+                val result = forecasts.refresh()
+                failure.value = (result as? RefreshResult.Failure)?.reason
+                loaded.value = true
+            } finally {
+                refreshing.value = false
+                userRefreshing.value = false
+            }
         }
     }
 
     /** Refreshes now and then every 5 minutes, for as long as the caller's coroutine runs. */
     suspend fun keepFresh() {
         while (true) {
-            refresh()
+            refresh(byUser = false)
             delay(AUTO_REFRESH_MS)
         }
     }
@@ -149,6 +170,13 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         const val AUTO_REFRESH_MS = 5 * 60 * 1000L
     }
 }
+
+private data class RefreshState(
+    val running: Boolean,
+    val byUser: Boolean,
+    val failure: FailureReason?,
+    val loaded: Boolean,
+)
 
 sealed interface SearchResults {
     data object Idle : SearchResults
