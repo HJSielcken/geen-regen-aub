@@ -14,7 +14,7 @@ Kotlin, Jetpack Compose with Material 3 (dynamic colour), a Glance home-screen w
 | `:feature:home` | Home screen: verdict, 2-hour rain graph, place picker |
 | `:feature:alerts` | Rain alert settings screen, notification, settings storage |
 | `:feature:forecast` | Weather forecast screen (now, 24 hours, 10 days), the home screen weather card, Meteocons icons |
-| `:widget` | Glance widgets (rain: verdict + 2-hour graph; weather: now, hours, days) and the 15-minute worker that refreshes, redraws and runs the alert check |
+| `:widget` | Glance widgets (rain: verdict + 2-hour graph; weather: now, hours, days, clock; air quality, sun, moon, wind) and the 15-minute worker that refreshes, redraws and runs the alert check |
 | `:feature:map` | Animated radar map (MapLibre, PDOK base map, frames from the relay's `/v1/radar`) |
 
 
@@ -28,6 +28,13 @@ The weather widget ("Weerbericht") grows with its size: just the weather now at 
 hours from 2 rows, and the coming days below that. The weather forecast comes straight from
 Open-Meteo and follows the same place as the rain forecast; the worker only fetches it when the
 cached one is older than 30 minutes.
+
+Four more widgets sit beside them, each scaling with its size: **Luchtkwaliteit** (European AQI
+with its band, the scale, and the next 24 hours as bars; Copernicus CAMS via Open-Meteo, fetched
+together with the weather), **Zon** (sunrise, sunset and the sun's path with the sun where it is
+now), **Maan** (phase, how much is lit, next new and full moon; computed on the phone) and
+**Wind** (speed, direction, Beaufort and gusts, a compass, and the coming hours). "Weer nu"
+leaves the wind and the sun to these.
 
 Rain alerts are off by default. Turn them on in **Instellingen**: the gear on the home screen, a
 long-press on the app icon, or the gear on Android's app info page.

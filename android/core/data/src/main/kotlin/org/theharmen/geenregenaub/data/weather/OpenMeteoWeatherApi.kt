@@ -11,6 +11,9 @@ import kotlin.math.roundToLong
 internal interface WeatherApi {
     /** The raw JSON body; parse it with [OpenMeteoJson]. @throws IOException on any failure. */
     suspend fun forecastJson(lat: Double, lon: Double): String
+
+    /** The air quality JSON; parse it with [AirQualityJson]. @throws IOException on any failure. */
+    suspend fun airQualityJson(lat: Double, lon: Double): String
 }
 
 /**
@@ -19,8 +22,13 @@ internal interface WeatherApi {
  * https://open-meteo.com/en/docs
  */
 internal class OpenMeteoWeatherApi : WeatherApi {
-    override suspend fun forecastJson(lat: Double, lon: Double): String = withContext(Dispatchers.IO) {
-        val url = URL(String.format(Locale.ROOT, "%s?latitude=%.2f&longitude=%.2f&%s", BASE, round(lat), round(lon), QUERY))
+    override suspend fun forecastJson(lat: Double, lon: Double): String = get(BASE, lat, lon, QUERY)
+
+    /** Copernicus CAMS air quality, from Open-Meteo's separate air quality API (same terms). */
+    override suspend fun airQualityJson(lat: Double, lon: Double): String = get(AIR_BASE, lat, lon, AIR_QUERY)
+
+    private suspend fun get(base: String, lat: Double, lon: Double, query: String): String = withContext(Dispatchers.IO) {
+        val url = URL(String.format(Locale.ROOT, "%s?latitude=%.2f&longitude=%.2f&%s", base, round(lat), round(lon), query))
         val connection = url.openConnection() as HttpURLConnection
         try {
             connection.connectTimeout = TIMEOUT_MS
@@ -38,7 +46,11 @@ internal class OpenMeteoWeatherApi : WeatherApi {
 
     companion object {
         private const val BASE = "https://api.open-meteo.com/v1/forecast"
+        private const val AIR_BASE = "https://air-quality-api.open-meteo.com/v1/air-quality"
         private const val TIMEOUT_MS = 15_000
+
+        const val AIR_QUERY = "current=european_aqi&hourly=european_aqi" +
+            "&timezone=auto&timeformat=unixtime&forecast_days=2"
 
         const val QUERY = "current=temperature_2m,apparent_temperature,weather_code,is_day,wind_speed_10m," +
             "wind_gusts_10m,wind_direction_10m,relative_humidity_2m" +
