@@ -1,11 +1,17 @@
 name: Release
 
-# Push a tag like v1.0.0 to build a signed, minified release APK and publish a GitHub Release.
-# Running it by hand (Actions tab) builds the same APK as an artifact and publishes nothing.
+# Push a tag like v1.0.0, or run it by hand with a version, to build a signed, minified release
+# APK and publish a GitHub Release (the tag is created if it doesn't exist yet). Run by hand
+# without a version, it only builds the APK as an artifact.
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, e.g. 1.0.0 (empty: build only)"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -32,9 +38,15 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
 
       - name: Version from the tag
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
           if [ "$GITHUB_REF_TYPE" = "tag" ]; then
             name="${GITHUB_REF_NAME#v}"
+            echo "RELEASE_TAG=$GITHUB_REF_NAME" >> "$GITHUB_ENV"
+          elif [ -n "$INPUT_VERSION" ]; then
+            name="${INPUT_VERSION#v}"
+            echo "RELEASE_TAG=v$name" >> "$GITHUB_ENV"
           else
             name="0.0.0-${GITHUB_SHA::7}"
           fi
@@ -47,7 +59,7 @@ jobs:
           if [ -n "$SIGNING_KEYSTORE_BASE64" ]; then
             echo "$SIGNING_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/geenregen.jks"
             echo "SIGNING_KEYSTORE_PATH=$RUNNER_TEMP/geenregen.jks" >> "$GITHUB_ENV"
-          elif [ "$GITHUB_REF_TYPE" = "tag" ]; then
+          elif [ -n "$RELEASE_TAG" ]; then
             echo "::error::SIGNING_KEYSTORE_BASE64 is not set; a release needs the signing key."
             exit 1
           else
@@ -82,12 +94,12 @@ jobs:
           if-no-files-found: error
 
       - name: Publish GitHub Release
-        if: github.ref_type == 'tag'
+        if: env.RELEASE_TAG != ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" "$APK" \
+          gh release create "$RELEASE_TAG" "$APK" \
             --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
             --title "Geen regen aub $VERSION_NAME" \
-            --generate-notes \
-            --verify-tag
+            --generate-notes
