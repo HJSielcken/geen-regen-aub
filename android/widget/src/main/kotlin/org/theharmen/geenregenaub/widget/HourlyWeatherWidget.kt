@@ -144,9 +144,9 @@ class HourlyWeatherWidget : GlanceAppWidget() {
                 )
             }
             if (level != Level.SMALL) {
-                // Direction and Beaufort, "ZW 4", as in the app's hour strip.
+                // "↗15 km/u": the arrow points where the wind blows to.
                 Text(
-                    text = WeatherFormat.wind(hour.windSpeedKmh, hour.windDirectionDegrees) ?: " ",
+                    text = windKmh(hour.windSpeedKmh, hour.windDirectionDegrees),
                     maxLines = 1,
                     style = TextStyle(color = palette.textVariant, fontSize = 10.sp, textAlign = TextAlign.Center),
                 )
@@ -161,6 +161,17 @@ class HourlyWeatherWidget : GlanceAppWidget() {
         // 4 × 4 sizes: Android allows at most 16 layouts per widget.
         val WIDTHS = listOf(150.dp, 230.dp, 320.dp, 410.dp)
         val HEIGHTS = listOf(64.dp, 84.dp, 104.dp, 150.dp)
+
+        private val ARROWS = listOf("↓", "↙", "←", "↖", "↑", "↗", "→", "↘")
+
+        /** Speed in km/u with an arrow for the direction; the forecast gives where the wind comes from. */
+        fun windKmh(kmh: Double?, fromDegrees: Double?): String {
+            kmh ?: return " "
+            val speed = "${kotlin.math.round(kmh).toInt()} km/u"
+            fromDegrees ?: return speed
+            val sector = Math.floorMod(kotlin.math.round(fromDegrees / 45.0).toInt(), 8)
+            return "${ARROWS[sector]}$speed"
+        }
 
         /** About 46 dp per hour, from 3 hours on a narrow widget to 9 on a wide one. */
         fun cellCount(width: Dp): Int = ((width - 20.dp).value / 46f).toInt().coerceIn(3, 9)
