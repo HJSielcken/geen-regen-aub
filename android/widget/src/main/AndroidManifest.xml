@@ -70,5 +70,49 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/clock_widget_info" />
         </receiver>
+        <receiver
+            android:name=".AirQualityWidgetReceiver"
+            android:exported="true"
+            android:label="@string/air_widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/air_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".SunWidgetReceiver"
+            android:exported="true"
+            android:label="@string/sun_widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/sun_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".MoonWidgetReceiver"
+            android:exported="true"
+            android:label="@string/moon_widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/moon_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".WindWidgetReceiver"
+            android:exported="true"
+            android:label="@string/wind_widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/wind_widget_info" />
+        </receiver>
     </application>
 </manifest>

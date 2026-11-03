@@ -11,6 +11,7 @@ import org.theharmen.geenregenaub.data.ForecastRepository
 import org.theharmen.geenregenaub.data.GeenRegenData
 import org.theharmen.geenregenaub.data.Place
 import org.theharmen.geenregenaub.data.PlaceRepository
+import org.theharmen.geenregenaub.domain.AirQuality
 import org.theharmen.geenregenaub.domain.WeatherForecast
 import java.io.IOException
 import java.time.Clock
@@ -23,9 +24,12 @@ data class CachedWeather(
     val forecast: WeatherForecast,
     val place: Place,
     val fetchedAt: Instant,
+    /** Null when the air quality fetch failed; the weather itself still counts. */
+    val airQuality: AirQuality? = null,
 ) {
     companion object {
         const val ATTRIBUTION = "Weerdata: Open-Meteo.com, CC BY 4.0"
+        const val AIR_ATTRIBUTION = "Luchtkwaliteit: Copernicus CAMS via Open-Meteo.com"
     }
 }
 
@@ -94,8 +98,12 @@ internal class DefaultWeatherRepository(
         }
         try {
             val body = api.forecastJson(place.lat, place.lon)
-            val weather = CachedWeather(OpenMeteoJson.parse(body), place, now)
-            store.save(place, now, body)
+            val forecast = OpenMeteoJson.parse(body)
+            // Air quality is extra: if it fails, keep the weather and show no air quality.
+            val airBody = runCatching { api.airQualityJson(place.lat, place.lon) }.getOrNull()
+            val air = airBody?.let { runCatching { AirQualityJson.parse(it) }.getOrNull() }
+            val weather = CachedWeather(forecast, place, now, air)
+            store.save(place, now, body, airBody.takeIf { air != null })
             WeatherRefreshResult.Success(weather)
         } catch (e: IOException) {
             WeatherRefreshResult.Failure(FailureReason.NETWORK, cached)

@@ -520,6 +520,7 @@ private fun Footer(weather: CachedWeather?, zone: ZoneId, onShowLicence: () -> U
             Text(stringResource(R.string.weather_updated, WeatherFormat.time(weather.fetchedAt, zone)), style = small, color = color)
         }
         Text(CachedWeather.ATTRIBUTION, style = small, color = color)
+        if (weather?.airQuality != null) Text(CachedWeather.AIR_ATTRIBUTION, style = small, color = color)
         Text(
             text = stringResource(R.string.weather_icons_credit),
             style = small,

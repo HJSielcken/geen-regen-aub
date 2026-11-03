@@ -30,6 +30,9 @@ KNMI Open Data API ──(API key)──> relay (BrooklynServer, Docker)
 - Fallback: [Open-Meteo](https://open-meteo.com/), CC BY 4.0, free non-commercial tier.
 - Weather forecast (temperature, sky, wind; hour by hour and day by day): [Open-Meteo](https://open-meteo.com/),
   CC BY 4.0, fetched straight from the phone (coordinates rounded to ~1 km). The relay is not involved.
+- Air quality (European AQI, for the Luchtkwaliteit widget): Copernicus Atmosphere Monitoring Service (CAMS)
+  via the [Open-Meteo air quality API](https://open-meteo.com/en/docs/air-quality-api), same terms.
+- Moon phases are worked out on the phone (Meeus, "Astronomical Algorithms"); no data source needed.
 - Weather icons: [Meteocons](https://github.com/basmilius/weather-icons) by Bas Milius, MIT licence,
   converted to Android vector drawables. The licence text ships in the app
   (`android/feature/forecast/src/main/res/raw/meteocons_license.txt`) and opens from the weather screen.

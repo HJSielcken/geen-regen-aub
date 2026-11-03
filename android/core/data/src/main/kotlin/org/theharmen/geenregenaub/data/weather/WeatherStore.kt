@@ -27,8 +27,8 @@ internal class WeatherStore(context: Context) {
         .map { prefs -> prefs[KEY]?.let(::decode) }
         .distinctUntilChanged()
 
-    suspend fun save(place: Place, fetchedAt: Instant, body: String) {
-        val stored = Stored(place.name, place.lat, place.lon, place.isCurrentLocation, fetchedAt.toEpochMilli(), body)
+    suspend fun save(place: Place, fetchedAt: Instant, body: String, airBody: String? = null) {
+        val stored = Stored(place.name, place.lat, place.lon, place.isCurrentLocation, fetchedAt.toEpochMilli(), body, airBody)
         dataStore.edit { it[KEY] = json.encodeToString(Stored.serializer(), stored) }
     }
 
@@ -40,6 +40,8 @@ internal class WeatherStore(context: Context) {
         val current: Boolean,
         val fetchedAtEpochMillis: Long,
         val body: String,
+        /** Open-Meteo's air quality JSON; absent in caches from before it was fetched. */
+        val airBody: String? = null,
     )
 
     private companion object {
@@ -52,6 +54,7 @@ internal class WeatherStore(context: Context) {
                 forecast = OpenMeteoJson.parse(stored.body),
                 place = Place(stored.name, stored.lat, stored.lon, stored.current),
                 fetchedAt = Instant.ofEpochMilli(stored.fetchedAtEpochMillis),
+                airQuality = stored.airBody?.let { runCatching { AirQualityJson.parse(it) }.getOrNull() },
             )
         }.getOrNull()
     }
