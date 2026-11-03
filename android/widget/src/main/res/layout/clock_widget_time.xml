@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The ticking part of the clock widget: Glance has no clock, RemoteViews' TextClock keeps time by itself. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:gravity="center_horizontal"
+    android:orientation="vertical">
+
+    <TextClock
+        android:id="@+id/clock_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="sans-serif-light"
+        android:format12Hour="h:mm"
+        android:format24Hour="HH:mm"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:textSize="56sp" />
+
+    <TextClock
+        android:id="@+id/clock_date"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:format12Hour="EEEE d MMMM"
+        android:format24Hour="EEEE d MMMM"
+        android:maxLines="1"
+        android:textSize="14sp" />
+</LinearLayout>

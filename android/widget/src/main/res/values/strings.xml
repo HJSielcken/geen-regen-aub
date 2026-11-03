@@ -21,6 +21,8 @@
     <string name="hourly_widget_name">Weer per uur</string>
     <string name="hourly_widget_description">Het weer voor de komende uren</string>
     <string name="hourly_widget_title">Komende uren</string>
+    <string name="clock_widget_name">Klok</string>
+    <string name="clock_widget_description">Tijd en datum met het weer van nu</string>
     <string name="daily_widget_name">Weer per dag</string>
     <string name="daily_widget_description">Het weer voor vandaag en de komende dagen</string>
     <string name="daily_widget_title">Komende dagen</string>
