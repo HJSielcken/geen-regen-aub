@@ -5,23 +5,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.glance.GlanceTheme
 import androidx.glance.color.ColorProviders
 import androidx.glance.material3.ColorProviders as MaterialColorProviders
 import androidx.glance.unit.ColorProvider
 import org.theharmen.geenregenaub.alerts.WidgetBackground
 import org.theharmen.geenregenaub.alerts.WidgetPreferences
-import org.theharmen.geenregenaub.alerts.WidgetTextColor
 import org.theharmen.geenregenaub.ui.theme.AppearancePreferences
 import org.theharmen.geenregenaub.ui.theme.GeenRegenColors
 import org.theharmen.geenregenaub.ui.theme.ThemeMode
 import org.theharmen.geenregenaub.ui.theme.geenRegenColorScheme
 
-/**
- * The few colours the widgets use. With a see-through background the theme's text colours
- * (dark on light) would vanish on most wallpapers, so those modes default to white text and a
- * light blue accent, like the launcher's own labels. The text colour can also be set by hand.
- */
+/** The few colours the widgets use, worked out from the theme and the widget settings. */
 internal class WidgetPalette(
     val background: ColorProvider,
     val text: ColorProvider,
@@ -36,7 +32,10 @@ internal val LocalWidgetPalette = staticCompositionLocalOf<WidgetPalette> {
 /** Everything about the widgets' look, read once per redraw. */
 internal class WidgetLook(
     val background: WidgetBackground,
-    val textColor: WidgetTextColor,
+    /** Chosen background colour; null follows the theme. */
+    val backgroundColor: Color?,
+    /** Chosen text colour; null picks one that reads well. */
+    val textColor: Color?,
     /** The app's theme: licht/donker/systeem and wallpaper colours, as chosen in Instellingen. */
     val theme: ColorProviders,
 ) {
@@ -51,7 +50,12 @@ internal class WidgetLook(
                 ThemeMode.DARK -> MaterialColorProviders(scheme = dark)
                 ThemeMode.SYSTEM -> MaterialColorProviders(light = light, dark = dark)
             }
-            return WidgetLook(prefs.background, prefs.textColor, theme)
+            return WidgetLook(
+                background = prefs.background,
+                backgroundColor = prefs.backgroundColor?.let(::Color),
+                textColor = prefs.textColor?.let(::Color),
+                theme = theme,
+            )
         }
     }
 }
@@ -60,35 +64,42 @@ internal class WidgetLook(
 internal fun WidgetTheme(look: WidgetLook, content: @Composable () -> Unit) {
     GlanceTheme(colors = look.theme) {
         val colors = GlanceTheme.colors
+        val chosen = look.backgroundColor
         val background = when (look.background) {
-            WidgetBackground.SOLID -> colors.widgetBackground
-            WidgetBackground.TRANSLUCENT -> ColorProvider(Color(0x66000000))
+            WidgetBackground.SOLID -> chosen?.let(::ColorProvider) ?: colors.widgetBackground
+            WidgetBackground.TRANSLUCENT -> ColorProvider((chosen ?: Color.Black).copy(alpha = 0.4f))
             WidgetBackground.TRANSPARENT -> ColorProvider(Color.Transparent)
         }
-        val textColor = when (look.textColor) {
-            WidgetTextColor.AUTO -> if (look.background == WidgetBackground.SOLID) null else WidgetTextColor.WHITE
-            else -> look.textColor
+        // The colour the text sits on, when we know it; null means the theme's own background.
+        val behind: Color? = when (look.background) {
+            WidgetBackground.SOLID -> chosen
+            // See-through: assume a busy wallpaper; light text reads best unless the tint is light.
+            WidgetBackground.TRANSLUCENT -> if ((chosen ?: Color.Black).luminance() > 0.5f) Color.White else Color.Black
+            WidgetBackground.TRANSPARENT -> Color.Black
         }
-        val palette = when (textColor) {
-            WidgetTextColor.WHITE -> WidgetPalette(
+        val text: Color? = look.textColor ?: behind?.let { if (it.luminance() > 0.5f) Ink else Color.White }
+
+        val palette = if (text == null) {
+            WidgetPalette(background, colors.onSurface, colors.onSurfaceVariant, colors.primary)
+        } else {
+            val lightText = text.luminance() > 0.5f
+            WidgetPalette(
                 background = background,
-                text = ColorProvider(Color.White),
-                textVariant = ColorProvider(Color(0xE6FFFFFF)),
-                accent = ColorProvider(GeenRegenColors.SkyLight),
-            )
-            WidgetTextColor.BLACK -> WidgetPalette(
-                background = background,
-                text = ColorProvider(Color(0xFF111111)),
-                textVariant = ColorProvider(Color(0xCC111111)),
-                accent = ColorProvider(GeenRegenColors.Sky),
-            )
-            else -> WidgetPalette(
-                background = background,
-                text = colors.onSurface,
-                textVariant = colors.onSurfaceVariant,
-                accent = colors.primary,
+                text = ColorProvider(text),
+                textVariant = ColorProvider(text.copy(alpha = 0.85f)),
+                // The app blue, unless the background is a colour of its own: then the text colour,
+                // so rain never disappears into a blue or red widget.
+                accent = ColorProvider(
+                    when {
+                        chosen != null && look.background != WidgetBackground.TRANSPARENT -> text
+                        lightText -> GeenRegenColors.SkyLight
+                        else -> GeenRegenColors.Sky
+                    },
+                ),
             )
         }
         CompositionLocalProvider(LocalWidgetPalette provides palette) { content() }
     }
 }
+
+private val Ink = Color(0xFF111111)

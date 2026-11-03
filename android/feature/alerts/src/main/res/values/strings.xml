@@ -36,7 +36,7 @@
     <string name="settings_widget_background_transparent">Transparant</string>
     <string name="settings_widget_text_color">Tekstkleur</string>
     <string name="settings_widget_text_auto">Automatisch</string>
-    <string name="settings_widget_text_white">Wit</string>
-    <string name="settings_widget_text_black">Zwart</string>
-    <string name="settings_widget_background_detail">De widgets volgen het thema en de kleuren hierboven. Automatisch geeft witte tekst bij doorschijnend en transparant.</string>
+    <string name="settings_widget_background_color">Achtergrondkleur</string>
+    <string name="settings_widget_color_theme">Thema</string>
+    <string name="settings_widget_background_detail">Thema volgt de weergave hierboven. Automatisch kiest een tekstkleur die goed leesbaar is op de achtergrond.</string>
 </resources>

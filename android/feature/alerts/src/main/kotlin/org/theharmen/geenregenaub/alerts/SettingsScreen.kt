@@ -6,6 +6,17 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.FilterChip
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -259,33 +270,75 @@ private fun WidgetSection(onChanged: () -> Unit) {
             }
         }
         HorizontalDivider()
+        Label(stringResource(R.string.settings_widget_background_color), enabled = true)
+        var backgroundColor by remember { mutableStateOf(prefs.backgroundColor) }
+        ColorSwatches(
+            selected = backgroundColor,
+            defaultLabel = stringResource(R.string.settings_widget_color_theme),
+            onSelect = {
+                backgroundColor = it
+                prefs.backgroundColor = it
+                onChanged()
+            },
+        )
+        HorizontalDivider()
         Label(stringResource(R.string.settings_widget_text_color), enabled = true)
         var textColor by remember { mutableStateOf(prefs.textColor) }
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            val options = listOf(
-                WidgetTextColor.AUTO to R.string.settings_widget_text_auto,
-                WidgetTextColor.WHITE to R.string.settings_widget_text_white,
-                WidgetTextColor.BLACK to R.string.settings_widget_text_black,
-            )
-            options.forEachIndexed { index, (option, label) ->
-                SegmentedButton(
-                    selected = textColor == option,
-                    onClick = {
-                        textColor = option
-                        prefs.textColor = option
-                        onChanged()
-                    },
-                    shape = SegmentedButtonDefaults.itemShape(index, options.size),
-                ) {
-                    Text(stringResource(label))
-                }
-            }
-        }
+        ColorSwatches(
+            selected = textColor,
+            defaultLabel = stringResource(R.string.settings_widget_text_auto),
+            onSelect = {
+                textColor = it
+                prefs.textColor = it
+                onChanged()
+            },
+        )
         Text(
             text = stringResource(R.string.settings_widget_background_detail),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+/** A default choice ("Thema" / "Automatisch") followed by round colour swatches. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ColorSwatches(selected: Int?, defaultLabel: String, onSelect: (Int?) -> Unit) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        FilterChip(
+            selected = selected == null,
+            onClick = { onSelect(null) },
+            label = { Text(defaultLabel) },
+        )
+        WidgetPreferences.SWATCHES.forEach { argb ->
+            val colour = Color(argb)
+            val isSelected = selected == argb
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(colour)
+                    .border(
+                        width = if (isSelected) 3.dp else 1.dp,
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                        shape = CircleShape,
+                    )
+                    .selectable(selected = isSelected, role = Role.RadioButton, onClick = { onSelect(argb) }),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (isSelected) {
+                    Text(
+                        text = "✓",
+                        color = if (colour.luminance() > 0.5f) Color.Black else Color.White,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                }
+            }
+        }
     }
 }
 
