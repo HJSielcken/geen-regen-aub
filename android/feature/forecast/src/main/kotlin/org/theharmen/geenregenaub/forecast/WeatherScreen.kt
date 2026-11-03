@@ -74,7 +74,10 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
-/** The weather forecast: now, the next 24 hours and the coming days, each day expandable to its hours. */
+/**
+ * The weather forecast: now, the next 24 hours and the coming days (each day expandable to its
+ * hours), then air quality, sun, moon and wind.
+ */
 @Composable
 fun WeatherScreen(onBack: () -> Unit, viewModel: WeatherViewModel = viewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -138,6 +141,10 @@ internal fun WeatherContent(
                     item { CurrentBlock(weather.forecast, state.now, today, zone) }
                     item { HoursCard(weather.forecast.hoursFrom(state.now, 24), zone) }
                     item { DaysCard(weather.forecast, today, zone) }
+                    weather.airQuality?.let { air -> item { AirQualityCard(air, state.now, zone) } }
+                    item { SunCard(weather.forecast, state.now, today, zone) }
+                    item { MoonCard(state.now, today, zone) }
+                    weather.forecast.current?.let { current -> item { WindCard(current) } }
                 } else if (state.isRefreshing || !state.hasLoaded) {
                     item { Loading() }
                 }
@@ -197,18 +204,10 @@ private fun CurrentBlock(forecast: WeatherForecast, now: Instant, today: LocalDa
             }
         }
 
+        // Wind and the sun have their own sections further down, so they are not repeated here.
         val facts = buildList {
-            WeatherFormat.wind(current?.windSpeedKmh, current?.windDirectionDegrees)?.let {
-                add(Fact(R.drawable.ic_fact_wind, stringResource(R.string.weather_wind), "$it Bft"))
-            }
-            current?.windGustsKmh?.let { add(Fact(R.drawable.ic_fact_gust, stringResource(R.string.weather_gusts), WeatherFormat.kmh(it))) }
             current?.humidityPercent?.let { add(Fact(R.drawable.ic_fact_humidity, stringResource(R.string.weather_humidity), WeatherFormat.percent(it))) }
-            val sunrise = day?.sunrise
-            val sunset = day?.sunset
-            if (sunrise != null && sunset != null) {
-                add(Fact(R.drawable.ic_fact_sunrise, stringResource(R.string.weather_sunrise), WeatherFormat.time(sunrise, zone)))
-                add(Fact(R.drawable.ic_fact_sunset, stringResource(R.string.weather_sunset), WeatherFormat.time(sunset, zone)))
-            }
+            day?.uvIndexMax?.let { add(Fact(R.drawable.ic_fact_uv, stringResource(R.string.weather_uv), String.format(java.util.Locale.ROOT, "%.0f", it))) }
         }
         if (facts.isNotEmpty()) FactGrid(facts)
     }
@@ -256,7 +255,7 @@ private fun FactGrid(facts: List<Fact>) {
 }
 
 @Composable
-private fun SectionCard(title: String, content: @Composable () -> Unit) {
+internal fun SectionCard(title: String, content: @Composable () -> Unit) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         modifier = Modifier.fillMaxWidth(),

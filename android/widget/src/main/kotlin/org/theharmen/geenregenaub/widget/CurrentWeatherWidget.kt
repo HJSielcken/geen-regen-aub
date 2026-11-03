@@ -39,8 +39,7 @@ import org.theharmen.geenregenaub.forecast.icon
 
 /**
  * "Weer nu": the weather right now, like the top of the weather screen. Wider adds the place and
- * today's max/min, taller adds "voelt als", and taller still the humidity. Wind and the sun have
- * widgets of their own now, so they are not repeated here.
+ * today's max/min, taller adds "voelt als", and taller still the wind, humidity and sun.
  *
  * Responsive sizes: the launcher picks the largest layout that fits, so nothing is ever drawn
  * for more room than the widget has (which is what clipped and flickered before).
@@ -69,7 +68,11 @@ class CurrentWeatherWidget : GlanceAppWidget() {
         val short = h < HEIGHTS[1]
         val tall = h >= HEIGHTS[5]
         val showDetail = h >= HEIGHTS[2]
-        val showFacts = h >= HEIGHTS[3]
+        val factRows = when {
+            h >= HEIGHTS[4] -> 2
+            h >= HEIGHTS[3] -> 1
+            else -> 0
+        }
         WidgetSurface(
             GlanceModifier
                 .padding(horizontal = 14.dp, vertical = 6.dp)
@@ -82,9 +85,9 @@ class CurrentWeatherWidget : GlanceAppWidget() {
             }
             Header(state, short, tall, wide = size.width >= 200.dp)
             if (showDetail) Detail(state)
-            if (showFacts) {
+            if (factRows > 0) {
                 Spacer(GlanceModifier.height(if (tall) 10.dp else 6.dp))
-                Facts(state)
+                Facts(state, factRows)
             }
         }
     }
@@ -152,19 +155,36 @@ class CurrentWeatherWidget : GlanceAppWidget() {
         )
     }
 
-    /** Humidity behind its icon; wind and sun live in their own widgets. */
+    /** Wind, gusts, humidity and sunrise/sunset, each behind its own icon. */
     @Composable
-    private fun Facts(state: WeatherWidgetState) {
+    private fun Facts(state: WeatherWidgetState, rows: Int) {
         val context = LocalContext.current
-        val row = buildList {
+        val first = buildList {
+            WeatherFormat.wind(state.windSpeedKmh, state.windDirectionDegrees)?.let {
+                add(Fact(org.theharmen.geenregenaub.forecast.R.drawable.ic_fact_wind, context.getString(R.string.forecast_widget_wind), "$it Bft"))
+            }
+            state.windGustsKmh?.let {
+                add(Fact(org.theharmen.geenregenaub.forecast.R.drawable.ic_fact_gust, context.getString(R.string.forecast_widget_gusts), WeatherFormat.kmh(it)))
+            }
             state.humidityPercent?.let {
                 add(Fact(org.theharmen.geenregenaub.forecast.R.drawable.ic_fact_humidity, context.getString(R.string.forecast_widget_humidity), WeatherFormat.percent(it)))
             }
         }
-        if (row.isEmpty()) return
-        Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            row.forEach { FactCell(it) }
-            repeat(3 - row.size) { Spacer(GlanceModifier.defaultWeight()) }
+        val second = buildList {
+            state.today?.sunrise?.let {
+                add(Fact(org.theharmen.geenregenaub.forecast.R.drawable.ic_fact_sunrise, context.getString(R.string.forecast_widget_sunrise), WeatherFormat.time(it, state.zone)))
+            }
+            state.today?.sunset?.let {
+                add(Fact(org.theharmen.geenregenaub.forecast.R.drawable.ic_fact_sunset, context.getString(R.string.forecast_widget_sunset), WeatherFormat.time(it, state.zone)))
+            }
+        }
+        // Three to a row, so the columns line up between the rows.
+        listOf(first, second).filter { it.isNotEmpty() }.take(rows).forEachIndexed { index, row ->
+            if (index > 0) Spacer(GlanceModifier.height(6.dp))
+            Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                row.forEach { FactCell(it) }
+                repeat(3 - row.size) { Spacer(GlanceModifier.defaultWeight()) }
+            }
         }
     }
 
@@ -190,8 +210,8 @@ private val HEIGHTS = listOf(
     48.dp, // temperature only
     64.dp, // + condition
     82.dp, // + "voelt als · max · min"
-    106.dp, // + humidity
-    130.dp, // a little more room between the lines
+    106.dp, // + wind, gusts, humidity
+    130.dp, // + sunrise, sunset
     160.dp, // bigger icon and temperature
 )
 

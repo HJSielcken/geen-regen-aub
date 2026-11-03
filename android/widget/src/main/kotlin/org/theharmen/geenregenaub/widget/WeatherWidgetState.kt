@@ -10,7 +10,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.theharmen.geenregenaub.data.weather.CachedWeather
 import org.theharmen.geenregenaub.data.weather.WeatherData
-import org.theharmen.geenregenaub.domain.AirQuality
 import org.theharmen.geenregenaub.domain.DayWeather
 import org.theharmen.geenregenaub.domain.HourWeather
 import org.theharmen.geenregenaub.domain.WeatherCondition
@@ -20,14 +19,11 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
-/** The weather widgets (now, per hour, per day, clock, air, sun, moon, wind), redrawn together. */
+/** The weather widgets (now, per hour, per day, clock), redrawn together. */
 object WeatherWidgets {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    internal fun all(): List<GlanceAppWidget> = listOf(
-        CurrentWeatherWidget(), HourlyWeatherWidget(), DailyWeatherWidget(), ClockWidget(),
-        AirQualityWidget(), SunWidget(), MoonWidget(), WindWidget(),
-    )
+    internal fun all(): List<GlanceAppWidget> = listOf(CurrentWeatherWidget(), HourlyWeatherWidget(), DailyWeatherWidget(), ClockWidget())
 
     /** Redraw every weather widget, e.g. after the app fetched a new forecast. */
     fun updateAllAsync(context: Context) {
@@ -67,9 +63,6 @@ internal data class WeatherWidgetState(
     val days: List<DayWeather>,
     val updatedAt: String,
     val zone: ZoneId,
-    /** When this state was worked out; the sun and moon widgets place themselves by it. */
-    val now: Instant,
-    val airQuality: AirQuality?,
 ) {
     val footer: String get() = "$updatedAt · Open-Meteo"
 
@@ -100,8 +93,6 @@ internal data class WeatherWidgetState(
                 days = forecast.daysFrom(todayDate),
                 updatedAt = WeatherFormat.time(weather.fetchedAt, zone),
                 zone = zone,
-                now = now,
-                airQuality = weather.airQuality,
             )
         }
     }
