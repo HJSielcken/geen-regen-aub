@@ -21,6 +21,18 @@ enum class WidgetBackground(val key: String) {
     }
 }
 
+/** Text colour on the widgets. AUTO is the theme's on a normal background, white when see-through. */
+enum class WidgetTextColor(val key: String) {
+    AUTO("auto"),
+    WHITE("white"),
+    BLACK("black"),
+    ;
+
+    companion object {
+        fun of(key: String?): WidgetTextColor = entries.firstOrNull { it.key == key } ?: AUTO
+    }
+}
+
 /** Widget look, in plain SharedPreferences so the widgets read it without extra plumbing. */
 class WidgetPreferences(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -29,8 +41,13 @@ class WidgetPreferences(context: Context) {
         get() = WidgetBackground.of(prefs.getString(KEY_BACKGROUND, null))
         set(value) = prefs.edit { putString(KEY_BACKGROUND, value.key) }
 
+    var textColor: WidgetTextColor
+        get() = WidgetTextColor.of(prefs.getString(KEY_TEXT_COLOR, null))
+        set(value) = prefs.edit { putString(KEY_TEXT_COLOR, value.key) }
+
     private companion object {
         const val FILE = "widget_look"
         const val KEY_BACKGROUND = "background"
+        const val KEY_TEXT_COLOR = "text_color"
     }
 }

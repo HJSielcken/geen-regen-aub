@@ -34,7 +34,6 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
-import org.theharmen.geenregenaub.alerts.WidgetPreferences
 import org.theharmen.geenregenaub.data.CachedForecast
 import org.theharmen.geenregenaub.data.GeenRegenData
 import org.theharmen.geenregenaub.domain.RainForecast
@@ -56,7 +55,7 @@ class RainWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val look = WidgetPreferences(context).background
+        val look = WidgetLook.load(context)
         val data = runCatching { GeenRegenData.forecastRepository(context).latest() }.getOrNull()
         val now = Instant.now()
         val state = WidgetState.of(data, now, ZoneId.systemDefault(), context.getString(R.string.widget_sample_data))

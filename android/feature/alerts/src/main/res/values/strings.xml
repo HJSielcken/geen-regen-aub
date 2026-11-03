@@ -34,5 +34,9 @@
     <string name="settings_widget_background_solid">Normaal</string>
     <string name="settings_widget_background_translucent">Doorschijnend</string>
     <string name="settings_widget_background_transparent">Transparant</string>
-    <string name="settings_widget_background_detail">Doorschijnend en transparant tonen witte tekst op je achtergrond.</string>
+    <string name="settings_widget_text_color">Tekstkleur</string>
+    <string name="settings_widget_text_auto">Automatisch</string>
+    <string name="settings_widget_text_white">Wit</string>
+    <string name="settings_widget_text_black">Zwart</string>
+    <string name="settings_widget_background_detail">De widgets volgen het thema en de kleuren hierboven. Automatisch geeft witte tekst bij doorschijnend en transparant.</string>
 </resources>

@@ -1,6 +1,8 @@
 package org.theharmen.geenregenaub.ui.theme
 
 import android.os.Build
+import android.content.Context
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -46,13 +48,17 @@ fun GeenRegenTheme(
     val appearance = rememberAppearance()
     val dark = darkTheme ?: isAppInDarkTheme(appearance)
     val useDynamic = dynamicColor ?: appearance.dynamicColor
-    val colorScheme = when {
-        useDynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        dark -> DarkColors
-        else -> LightColors
-    }
+    val colorScheme = geenRegenColorScheme(LocalContext.current, dark, useDynamic)
     MaterialTheme(colorScheme = colorScheme, content = content)
+}
+
+/**
+ * The colour scheme for light or dark, with or without wallpaper colours. Outside Compose
+ * too, so the home-screen widgets can match the app.
+ */
+fun geenRegenColorScheme(context: Context, dark: Boolean, dynamicColor: Boolean): ColorScheme = when {
+    dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+        if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+    dark -> DarkColors
+    else -> LightColors
 }

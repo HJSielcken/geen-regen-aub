@@ -39,7 +39,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import org.theharmen.geenregenaub.alerts.WidgetPreferences
 import org.theharmen.geenregenaub.data.weather.CachedWeather
 import org.theharmen.geenregenaub.data.weather.WeatherData
 import org.theharmen.geenregenaub.domain.DayWeather
@@ -60,7 +59,7 @@ class ForecastWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val look = WidgetPreferences(context).background
+        val look = WidgetLook.load(context)
         val weather = runCatching { WeatherData.repository(context).latest() }.getOrNull()
         val state = ForecastWidgetState.of(weather, Instant.now(), ZoneId.systemDefault())
         val open = WeatherActivity.intent(context).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

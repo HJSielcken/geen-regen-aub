@@ -179,7 +179,7 @@ fun SettingsScreen(
                 }
             }
 
-            AppearanceSection()
+            AppearanceSection(onChanged = onChanged)
 
             WidgetSection(onChanged = onChanged)
 
@@ -190,7 +190,7 @@ fun SettingsScreen(
 
 /** Licht / donker / systeem, and whether to take colours from the wallpaper. */
 @Composable
-private fun AppearanceSection() {
+private fun AppearanceSection(onChanged: () -> Unit) {
     val context = LocalContext.current
     val prefs = remember { AppearancePreferences(context) }
     val appearance = rememberAppearance()
@@ -205,7 +205,10 @@ private fun AppearanceSection() {
             options.forEachIndexed { index, (mode, label) ->
                 SegmentedButton(
                     selected = appearance.mode == mode,
-                    onClick = { prefs.appearance = appearance.copy(mode = mode) },
+                    onClick = {
+                        prefs.appearance = appearance.copy(mode = mode)
+                        onChanged() // the widgets follow the theme too
+                    },
                     shape = SegmentedButtonDefaults.itemShape(index, options.size),
                 ) {
                     Text(stringResource(label))
@@ -218,7 +221,10 @@ private fun AppearanceSection() {
                 title = stringResource(R.string.settings_dynamic_color),
                 detail = stringResource(R.string.settings_dynamic_color_detail),
                 checked = appearance.dynamicColor,
-                onCheckedChange = { prefs.appearance = appearance.copy(dynamicColor = it) },
+                onCheckedChange = {
+                    prefs.appearance = appearance.copy(dynamicColor = it)
+                    onChanged()
+                },
             )
         }
     }
@@ -244,6 +250,29 @@ private fun WidgetSection(onChanged: () -> Unit) {
                     onClick = {
                         background = option
                         prefs.background = option
+                        onChanged()
+                    },
+                    shape = SegmentedButtonDefaults.itemShape(index, options.size),
+                ) {
+                    Text(stringResource(label))
+                }
+            }
+        }
+        HorizontalDivider()
+        Label(stringResource(R.string.settings_widget_text_color), enabled = true)
+        var textColor by remember { mutableStateOf(prefs.textColor) }
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            val options = listOf(
+                WidgetTextColor.AUTO to R.string.settings_widget_text_auto,
+                WidgetTextColor.WHITE to R.string.settings_widget_text_white,
+                WidgetTextColor.BLACK to R.string.settings_widget_text_black,
+            )
+            options.forEachIndexed { index, (option, label) ->
+                SegmentedButton(
+                    selected = textColor == option,
+                    onClick = {
+                        textColor = option
+                        prefs.textColor = option
                         onChanged()
                     },
                     shape = SegmentedButtonDefaults.itemShape(index, options.size),
