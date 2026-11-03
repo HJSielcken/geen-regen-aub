@@ -5,6 +5,7 @@ import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
@@ -23,6 +24,7 @@ import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
+import androidx.glance.layout.ColumnScope
 import androidx.glance.layout.ContentScale
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
@@ -57,7 +59,11 @@ import java.time.format.DateTimeFormatter
  * 2-hour rain graph. It renders from the offline cache only; [WidgetRefreshWorker] fetches.
  */
 class RainWidget : GlanceAppWidget() {
-    override val sizeMode = SizeMode.Exact
+    // Responsive, not Exact: Nova reports exact sizes that are off, which made the widget think
+    // it was too low for the graph. The graph fills whatever height there really is.
+    override val sizeMode = SizeMode.Responsive(
+        listOf(150.dp, 250.dp, 330.dp).flatMap { w -> listOf(56.dp, 100.dp, 140.dp, 180.dp).map { h -> DpSize(w, h) } }.toSet(),
+    )
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val look = WidgetLook.load(context)
@@ -82,42 +88,43 @@ class RainWidget : GlanceAppWidget() {
             .fillMaxSize()
             .background(palette.background)
             .cornerRadius(20.dp)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
         if (launch != null) modifier = modifier.clickable(actionStartActivity(launch))
 
-        val compact = size.height < 110.dp
+        val withAxis = size.height >= 100.dp
+        val graph = state.graph
         Column(modifier = modifier) {
-            Text(
-                text = state.headline(context),
-                maxLines = 2,
-                style = TextStyle(
-                    color = if (state.isRain) palette.accent else palette.text,
-                    fontSize = if (size.width < 180.dp) 15.sp else 18.sp,
-                    fontWeight = FontWeight.Bold,
-                ),
-            )
-
-            val graph = state.graph
-            if (!compact && graph != null) {
-                Spacer(GlanceModifier.height(8.dp))
-                Graph(graph, state.headline(context), size.width - 32.dp, graphHeight(size.height))
-                // With the intensity labels on, the time axis ends where the curve ends.
-                val axisEnd = if (LocalWidgetLook.current.intensityLines) RainGraphRenderer.GUIDE_GUTTER_DP.dp else 0.dp
-                Row(modifier = GlanceModifier.fillMaxWidth().padding(top = 2.dp, end = axisEnd)) {
-                    AxisLabel(context.getString(R.string.widget_axis_now), TextAlign.Start)
-                    AxisLabel(context.getString(R.string.widget_axis_one_hour), TextAlign.Center)
-                    AxisLabel(context.getString(R.string.widget_axis_two_hours), TextAlign.End)
-                }
-            } else if (!compact) {
-                Spacer(GlanceModifier.height(4.dp))
+            if (graph == null) {
+                // No forecast to draw: say why instead.
                 Text(
-                    text = context.getString(R.string.widget_no_data_detail),
+                    text = state.headline(context),
                     maxLines = 2,
-                    style = TextStyle(color = palette.textVariant, fontSize = 13.sp),
+                    style = TextStyle(color = palette.text, fontSize = 15.sp, fontWeight = FontWeight.Bold),
                 )
+                if (withAxis) {
+                    Spacer(GlanceModifier.height(4.dp))
+                    Text(
+                        text = context.getString(R.string.widget_no_data_detail),
+                        maxLines = 2,
+                        style = TextStyle(color = palette.textVariant, fontSize = 13.sp),
+                    )
+                }
+                Spacer(GlanceModifier.defaultWeight())
+            } else {
+                // Just the graph: no "Droog de komende 2 uur" above it.
+                val axis = if (withAxis) 16.dp else 0.dp
+                val estimate = (size.height - 24.dp - 16.dp - axis).coerceAtLeast(24.dp)
+                Graph(graph, state.headline(context), size.width - 32.dp, estimate)
+                if (withAxis) {
+                    // With the intensity labels on, the time axis ends where the curve ends.
+                    val axisEnd = if (LocalWidgetLook.current.intensityLines) RainGraphRenderer.GUIDE_GUTTER_DP.dp else 0.dp
+                    Row(modifier = GlanceModifier.fillMaxWidth().padding(top = 2.dp, end = axisEnd)) {
+                        AxisLabel(context.getString(R.string.widget_axis_now), TextAlign.Start)
+                        AxisLabel(context.getString(R.string.widget_axis_one_hour), TextAlign.Center)
+                        AxisLabel(context.getString(R.string.widget_axis_two_hours), TextAlign.End)
+                    }
+                }
             }
-
-            Spacer(GlanceModifier.defaultWeight())
             Text(
                 text = state.footer(context),
                 maxLines = 1,
@@ -127,7 +134,7 @@ class RainWidget : GlanceAppWidget() {
     }
 
     @Composable
-    private fun Graph(forecast: RainForecast, description: String, width: Dp, height: Dp) {
+    private fun ColumnScope.Graph(forecast: RainForecast, description: String, width: Dp, height: Dp) {
         val palette = LocalWidgetPalette.current
         val context = LocalContext.current
         val density = context.resources.displayMetrics.density
@@ -158,7 +165,8 @@ class RainWidget : GlanceAppWidget() {
             provider = ImageProvider(bitmap),
             contentDescription = description,
             contentScale = ContentScale.FillBounds,
-            modifier = GlanceModifier.fillMaxWidth().height(height),
+            // Fills the height left over; the bitmap is drawn for the estimated size and stretched.
+            modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
         )
     }
 
@@ -172,8 +180,6 @@ class RainWidget : GlanceAppWidget() {
         )
     }
 
-    /** Room left for the graph after the headline, axis labels, footer and padding. */
-    private fun graphHeight(widgetHeight: Dp): Dp = (widgetHeight - 104.dp).coerceIn(32.dp, 180.dp)
 
     companion object {
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)

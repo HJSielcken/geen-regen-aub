@@ -1,10 +1,11 @@
 package org.theharmen.geenregenaub.widget
 
 import android.content.Context
+import android.app.PendingIntent
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.provider.AlarmClock
 import android.util.TypedValue
-import android.view.View
 import android.widget.RemoteViews
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.toArgb
@@ -42,7 +43,8 @@ import org.theharmen.geenregenaub.domain.formatTemperature
 import org.theharmen.geenregenaub.forecast.icon
 
 /**
- * "Klok": the time and date, and when wide enough the weather now beside it, split by a thin line.
+ * "Klok": the time, date and place, with the weather now beside it behind a thin line. The
+ * content is the same at every size; a bigger widget only makes everything bigger.
  * The time is a TextClock in plain RemoteViews, so it keeps ticking without the app waking up.
  * Tapping the time opens the alarm clock; tapping the weather opens the weather screen.
  */
@@ -55,26 +57,22 @@ class ClockWidget : GlanceAppWidget() {
         val look = WidgetLook.load(context)
         val state = WeatherWidgets.load(context)
         val weather = WeatherWidgets.openIntent(context)
-        val alarms = Intent(AlarmClock.ACTION_SHOW_ALARMS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val alarms = AlarmClockIntent.pendingIntent(context)
         provideContent {
             WidgetTheme(look) { Content(state, weather, alarms) }
         }
     }
 
     @Composable
-    private fun Content(state: WeatherWidgetState?, weather: Intent, alarms: Intent) {
+    private fun Content(state: WeatherWidgetState?, weather: Intent, alarms: PendingIntent?) {
         val palette = LocalWidgetPalette.current
         val size = LocalSize.current
-        val h = size.height
-        val level = when {
-            h >= HEIGHTS[3] -> 3
-            h >= HEIGHTS[2] -> 2
-            h >= HEIGHTS[1] -> 1
-            else -> 0
-        }
-        val wide = size.width >= WIDTHS[1]
+        // Designed for BASE; scaled to fit the room there is, never re-arranged.
+        val scale = minOf(size.width / BASE.width, size.height / BASE.height).coerceIn(0.45f, 2f)
+        fun Float.s() = (this * scale).sp
+        fun Int.d() = (this * scale).dp
         WidgetSurface(
-            GlanceModifier.padding(horizontal = 14.dp, vertical = 6.dp),
+            GlanceModifier.padding(horizontal = 12.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Row(
@@ -82,91 +80,104 @@ class ClockWidget : GlanceAppWidget() {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = GlanceModifier.clickable(actionStartActivity(alarms)),
-                ) {
-                    Clock(level)
-                    if (level >= 2 && state != null) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Clock(scale, alarms)
+                    if (state != null) {
                         Text(
                             text = state.placeName,
                             maxLines = 1,
-                            style = TextStyle(color = palette.text, fontSize = 13.sp, textAlign = TextAlign.Center),
+                            style = TextStyle(color = palette.text, fontSize = 13f.s(), textAlign = TextAlign.Center),
                         )
                     }
                 }
-                if (wide && state != null) {
-                    Spacer(GlanceModifier.width(16.dp))
-                    Spacer(
-                        GlanceModifier
-                            .width(1.dp)
-                            .height(if (level >= 2) 72.dp else 40.dp)
-                            .background(palette.textVariant),
-                    )
-                    Spacer(GlanceModifier.width(16.dp))
-                    Weather(state, level, weather)
+                if (state != null) {
+                    Spacer(GlanceModifier.width(16.d()))
+                    Spacer(GlanceModifier.width(1.dp).height(72.d()).background(palette.textVariant))
+                    Spacer(GlanceModifier.width(16.d()))
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = GlanceModifier.clickable(actionStartActivity(weather)),
+                    ) {
+                        Image(
+                            provider = ImageProvider(state.condition.icon(state.isDay)),
+                            contentDescription = state.condition.dutch(state.isDay),
+                            modifier = GlanceModifier.size(44.d()),
+                        )
+                        Text(
+                            text = formatTemperature(state.temperature),
+                            maxLines = 1,
+                            style = TextStyle(color = palette.text, fontSize = 26f.s(), fontWeight = FontWeight.Medium),
+                        )
+                        state.today?.let { today ->
+                            Text(
+                                text = "${formatTemperature(today.temperatureMax)}/${formatTemperature(today.temperatureMin)}",
+                                maxLines = 1,
+                                style = TextStyle(color = palette.textVariant, fontSize = 12f.s()),
+                            )
+                        }
+                    }
                 }
             }
         }
     }
 
-    /** Time and date as a TextClock, coloured and sized for this widget. */
+    /** Time and date as a TextClock, coloured and sized for this widget; tapping opens the alarms. */
     @Composable
-    private fun Clock(level: Int) {
+    private fun Clock(scale: Float, alarms: PendingIntent?) {
         val palette = LocalWidgetPalette.current
         val context = LocalContext.current
+        val colour = palette.text.getColor(context).toArgb()
         val views = RemoteViews(context.packageName, R.layout.clock_widget_time).apply {
-            val timeSize = when (level) {
-                0 -> 36f
-                1 -> 40f
-                2 -> 52f
-                else -> 64f
-            }
-            setTextViewTextSize(R.id.clock_time, TypedValue.COMPLEX_UNIT_SP, timeSize)
-            setTextViewTextSize(R.id.clock_date, TypedValue.COMPLEX_UNIT_SP, if (level >= 2) 14f else 12f)
-            setTextColor(R.id.clock_time, palette.text.getColor(context).toArgb())
-            setTextColor(R.id.clock_date, palette.text.getColor(context).toArgb())
-            setViewVisibility(R.id.clock_date, if (level >= 1) View.VISIBLE else View.GONE)
+            setTextViewTextSize(R.id.clock_time, TypedValue.COMPLEX_UNIT_SP, 52f * scale)
+            setTextViewTextSize(R.id.clock_date, TypedValue.COMPLEX_UNIT_SP, 14f * scale)
+            setTextColor(R.id.clock_time, colour)
+            setTextColor(R.id.clock_date, colour)
+            // On the RemoteViews themselves: a Glance click around them does not reach every launcher.
+            if (alarms != null) setOnClickPendingIntent(R.id.clock_root, alarms)
         }
         AndroidRemoteViews(views)
     }
 
-    @Composable
-    private fun Weather(state: WeatherWidgetState, level: Int, open: Intent) {
-        val palette = LocalWidgetPalette.current
-        val big = level >= 2
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = GlanceModifier.clickable(actionStartActivity(open)),
-        ) {
-            Image(
-                provider = ImageProvider(state.condition.icon(state.isDay)),
-                contentDescription = state.condition.dutch(state.isDay),
-                modifier = GlanceModifier.size(if (big) 44.dp else 28.dp),
-            )
-            Text(
-                text = formatTemperature(state.temperature),
-                maxLines = 1,
-                style = TextStyle(color = palette.text, fontSize = if (big) 26.sp else 18.sp, fontWeight = FontWeight.Medium),
-            )
-            if (big) {
-                state.today?.let { today ->
-                    Text(
-                        text = "${formatTemperature(today.temperatureMax)}/${formatTemperature(today.temperatureMin)}",
-                        maxLines = 1,
-                        style = TextStyle(color = palette.textVariant, fontSize = 12.sp),
-                    )
-                }
-            }
-        }
-    }
-
     private companion object {
-        val WIDTHS = listOf(150.dp, 250.dp, 330.dp)
-
-        /** 0: time only; 1: + date; 2: bigger, + place and max/min; 3: biggest. */
-        val HEIGHTS = listOf(56.dp, 80.dp, 110.dp, 140.dp)
+        /** The size the layout is designed for; everything scales from here. */
+        val BASE = DpSize(300.dp, 120.dp)
+        val WIDTHS = listOf(160.dp, 220.dp, 280.dp, 340.dp)
+        val HEIGHTS = listOf(56.dp, 90.dp, 120.dp, 160.dp)
     }
+}
+
+/** Opens the phone's alarm clock app, whichever app that is. */
+internal object AlarmClockIntent {
+    private val KNOWN_CLOCKS = listOf(
+        "com.sec.android.app.clockpackage", // Samsung
+        "com.google.android.deskclock", // Google
+        "com.android.deskclock", // AOSP and many others
+        "com.oneplus.deskclock",
+        "com.coloros.alarmclock",
+        "com.miui.clock",
+    )
+
+    fun pendingIntent(context: Context): PendingIntent? {
+        val intent = resolve(context) ?: return null
+        return PendingIntent.getActivity(
+            context,
+            REQUEST_CODE,
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+    }
+
+    /** An explicit intent: implicit ones in a widget's PendingIntent are not handled everywhere. */
+    private fun resolve(context: Context): Intent? {
+        val pm = context.packageManager
+        val show = Intent(AlarmClock.ACTION_SHOW_ALARMS)
+        pm.resolveActivity(show, PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.let { info ->
+            if (info.packageName != "android") return show.setClassName(info.packageName, info.name)
+        }
+        return KNOWN_CLOCKS.firstNotNullOfOrNull { pm.getLaunchIntentForPackage(it) }
+    }
+
+    private const val REQUEST_CODE = 4217
 }
 
 class ClockWidgetReceiver : GlanceAppWidgetReceiver() {

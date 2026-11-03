@@ -161,21 +161,21 @@ class CurrentWeatherWidget : GlanceAppWidget() {
         val context = LocalContext.current
         val first = buildList {
             WeatherFormat.wind(state.windSpeedKmh, state.windDirectionDegrees)?.let {
-                add(Fact(R.drawable.ic_widget_wind, context.getString(R.string.forecast_widget_wind), "$it Bft"))
+                add(Fact(org.theharmen.geenregenaub.forecast.R.drawable.ic_fact_wind, context.getString(R.string.forecast_widget_wind), "$it Bft"))
             }
             state.windGustsKmh?.let {
-                add(Fact(R.drawable.ic_widget_gust, context.getString(R.string.forecast_widget_gusts), WeatherFormat.kmh(it)))
+                add(Fact(org.theharmen.geenregenaub.forecast.R.drawable.ic_fact_gust, context.getString(R.string.forecast_widget_gusts), WeatherFormat.kmh(it)))
             }
             state.humidityPercent?.let {
-                add(Fact(R.drawable.ic_widget_humidity, context.getString(R.string.forecast_widget_humidity), WeatherFormat.percent(it)))
+                add(Fact(org.theharmen.geenregenaub.forecast.R.drawable.ic_fact_humidity, context.getString(R.string.forecast_widget_humidity), WeatherFormat.percent(it)))
             }
         }
         val second = buildList {
             state.today?.sunrise?.let {
-                add(Fact(R.drawable.ic_widget_sunrise, context.getString(R.string.forecast_widget_sunrise), WeatherFormat.time(it, state.zone)))
+                add(Fact(org.theharmen.geenregenaub.forecast.R.drawable.ic_fact_sunrise, context.getString(R.string.forecast_widget_sunrise), WeatherFormat.time(it, state.zone)))
             }
             state.today?.sunset?.let {
-                add(Fact(R.drawable.ic_widget_sunset, context.getString(R.string.forecast_widget_sunset), WeatherFormat.time(it, state.zone)))
+                add(Fact(org.theharmen.geenregenaub.forecast.R.drawable.ic_fact_sunset, context.getString(R.string.forecast_widget_sunset), WeatherFormat.time(it, state.zone)))
             }
         }
         // Three to a row, so the columns line up between the rows.

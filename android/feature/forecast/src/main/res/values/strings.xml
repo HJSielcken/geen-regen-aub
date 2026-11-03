@@ -13,7 +13,8 @@
     <string name="weather_wind">Wind</string>
     <string name="weather_gusts">Windstoten</string>
     <string name="weather_humidity">Vochtigheid</string>
-    <string name="weather_sun">Zon op / onder</string>
+    <string name="weather_sunrise">Zonsopkomst</string>
+    <string name="weather_sunset">Zonsondergang</string>
     <string name="weather_rain_chance">Kans op neerslag</string>
     <string name="weather_rain_amount">Neerslag</string>
     <string name="weather_uv">UV-index</string>
