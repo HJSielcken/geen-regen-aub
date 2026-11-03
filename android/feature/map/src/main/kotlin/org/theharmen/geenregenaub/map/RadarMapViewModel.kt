@@ -53,6 +53,7 @@ class RadarMapViewModel(application: Application) : AndroidViewModel(application
 
     private var loadJob: Job? = null
     private var playJob: Job? = null
+    private var autoplayed = false
 
     init {
         viewModelScope.launch {
@@ -85,7 +86,11 @@ class RadarMapViewModel(application: Application) : AndroidViewModel(application
                             val bitmap = withContext(Dispatchers.Default) {
                                 BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                             }
-                            if (bitmap != null) _state.update { it.copy(images = it.images + (i to bitmap)) }
+                            if (bitmap != null) {
+                                _state.update { it.copy(images = it.images + (i to bitmap)) }
+                                // Play as soon as there is something to show.
+                                autoplay()
+                            }
                         }
                     }
                 }.awaitAll()
@@ -111,8 +116,10 @@ class RadarMapViewModel(application: Application) : AndroidViewModel(application
         select(index)
     }
 
-    /** Starts the animation once, for the home screen preview. */
+    /** Starts the animation once, when the first picture is in. A pause by the user sticks. */
     fun autoplay() {
+        if (autoplayed || !_state.value.isReady) return
+        autoplayed = true
         if (playJob?.isActive != true) play()
     }
 
