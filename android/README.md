@@ -59,7 +59,9 @@ APK is newer installs over the older one.
 Release builds run R8 (code shrinking, obfuscation, optimisation) and resource shrinking, with
 keep rules in `app/proguard-rules.pro`. MapLibre's native library is most of the APK, so only
 the `arm64-v8a` copy is packed (all phones of the last years). For an x86 emulator or an old
-32-bit phone, build with `-Pgeenregen.allAbis=true`. Only Dutch and English resources are kept.
+32-bit phone, build with `-Pgeenregen.allAbis=true`. That library is packed compressed, which
+roughly halves the download; Android unpacks it on install. Only Dutch and English resources are
+kept. Every build log ends with a size breakdown (`reportApkSize`).
 
 ## Crash reports (Sentry)
 

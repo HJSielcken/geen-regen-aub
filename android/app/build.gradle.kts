@@ -100,6 +100,11 @@ android {
             // Build metadata that nothing reads at runtime.
             excludes += setOf("/META-INF/{AL2.0,LGPL2.1}", "DebugProbesKt.bin", "/kotlin-tooling-metadata.json")
         }
+        // MapLibre's native library is 12 MB, most of the APK. Compressed, the download is
+        // about half; Android unpacks it once on install, so the app takes a bit more storage.
+        jniLibs {
+            useLegacyPackaging = true
+        }
     }
 
     compileOptions {
