@@ -1,6 +1,14 @@
 package org.theharmen.geenregenaub.widget
 
 import android.content.Context
+import android.content.SharedPreferences
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.glance.LocalContext
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -60,8 +68,30 @@ internal class WidgetLook(
     }
 }
 
+/**
+ * The look, kept up to date while the widget is shown. Glance keeps a widget's session alive
+ * between updates and only recomposes it, so a look read once in provideGlance would stay stale
+ * until the session ended; listening to the settings makes a change show right away.
+ */
+private fun lookUpdates(context: Context): Flow<WidgetLook> = callbackFlow {
+    val widget = WidgetPreferences(context)
+    val appearance = AppearancePreferences(context)
+    val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+        trySend(WidgetLook.load(context))
+    }
+    widget.register(listener)
+    appearance.register(listener)
+    awaitClose {
+        widget.unregister(listener)
+        appearance.unregister(listener)
+    }
+}
+
 @Composable
-internal fun WidgetTheme(look: WidgetLook, content: @Composable () -> Unit) {
+internal fun WidgetTheme(initial: WidgetLook, content: @Composable () -> Unit) {
+    val context = LocalContext.current
+    val updates = remember(context) { lookUpdates(context.applicationContext) }
+    val look by updates.collectAsState(initial = initial)
     GlanceTheme(colors = look.theme) {
         val colors = GlanceTheme.colors
         val chosen = look.backgroundColor

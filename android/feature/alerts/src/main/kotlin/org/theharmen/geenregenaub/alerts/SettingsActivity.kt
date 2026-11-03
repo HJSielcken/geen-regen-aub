@@ -50,4 +50,8 @@ class SettingsActivity : ComponentActivity() {
 object AlertsHooks {
     @Volatile
     var onSettingsChanged: (Context) -> Unit = {}
+
+    /** The widgets' colours or the app theme changed: redraw the widgets, nothing to fetch. */
+    @Volatile
+    var onWidgetLookChanged: (Context) -> Unit = {}
 }

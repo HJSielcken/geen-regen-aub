@@ -1,6 +1,7 @@
 package org.theharmen.geenregenaub.alerts
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.core.content.edit
 
 /** How the home-screen widgets draw their background. */
@@ -39,6 +40,12 @@ class WidgetPreferences(context: Context) {
     var textColor: Int?
         get() = colour(KEY_TEXT_COLOR)
         set(value) = setColour(KEY_TEXT_COLOR, value)
+
+    fun register(listener: SharedPreferences.OnSharedPreferenceChangeListener) =
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+
+    fun unregister(listener: SharedPreferences.OnSharedPreferenceChangeListener) =
+        prefs.unregisterOnSharedPreferenceChangeListener(listener)
 
     private fun colour(key: String): Int? = if (prefs.contains(key)) prefs.getInt(key, 0) else null
 
