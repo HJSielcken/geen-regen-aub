@@ -54,7 +54,7 @@ internal object RainGraphRenderer {
         val bitmap = createBitmap(w, h)
         val canvas = Canvas(bitmap)
 
-        val baselineHeight = max(1f, 1.5f * d)
+        val baselineHeight = max(1f, d)
         val chartBottom = h - baselineHeight
         // With labels, the curve keeps clear of the label column on the right.
         val chartRight = if (guides != null) max(1f, w - GUIDE_GUTTER_DP * d) else w.toFloat()
@@ -118,9 +118,9 @@ internal object RainGraphRenderer {
     private fun drawGuides(canvas: Canvas, guides: Guides, chartRight: Float, chartBottom: Float, d: Float) {
         val line = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = guides.lineColor
-            strokeWidth = max(1f, d)
+            strokeWidth = max(1f, 0.5f * d)
             style = Paint.Style.STROKE
-            pathEffect = android.graphics.DashPathEffect(floatArrayOf(4 * d, 3 * d), 0f)
+            pathEffect = android.graphics.DashPathEffect(floatArrayOf(3 * d, 3 * d), 0f)
         }
         val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = guides.labelColor

@@ -158,7 +158,7 @@ class CurrentWeatherWidget : GlanceAppWidget() {
         val context = LocalContext.current
         val row = buildList {
             state.humidityPercent?.let {
-                add(Fact(R.drawable.ic_widget_humidity, context.getString(R.string.forecast_widget_humidity), WeatherFormat.percent(it)))
+                add(Fact(org.theharmen.geenregenaub.forecast.R.drawable.ic_fact_humidity, context.getString(R.string.forecast_widget_humidity), WeatherFormat.percent(it)))
             }
         }
         if (row.isEmpty()) return

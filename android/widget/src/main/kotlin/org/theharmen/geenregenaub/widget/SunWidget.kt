@@ -118,7 +118,7 @@ class SunWidget : GlanceAppWidget() {
                 Spacer(GlanceModifier.height(2.dp))
             }
             Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                SunTime(R.drawable.ic_widget_sunrise, R.string.forecast_widget_sunrise, WeatherFormat.time(day.sunrise, state.zone))
+                SunTime(org.theharmen.geenregenaub.forecast.R.drawable.ic_fact_sunrise, R.string.forecast_widget_sunrise, WeatherFormat.time(day.sunrise, state.zone))
                 if (!showArc || size.width >= WIDTHS[1]) {
                     Text(
                         text = if (showArc) dayLength(context, day) else title,
@@ -129,7 +129,7 @@ class SunWidget : GlanceAppWidget() {
                 } else {
                     Spacer(GlanceModifier.defaultWeight())
                 }
-                SunTime(R.drawable.ic_widget_sunset, R.string.forecast_widget_sunset, WeatherFormat.time(day.sunset, state.zone))
+                SunTime(org.theharmen.geenregenaub.forecast.R.drawable.ic_fact_sunset, R.string.forecast_widget_sunset, WeatherFormat.time(day.sunset, state.zone))
             }
             if (showArc) {
                 Text(
