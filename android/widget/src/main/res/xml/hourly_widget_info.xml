@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/hourly_widget_description"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:minWidth="150dp"
+    android:minHeight="64dp"
+    android:minResizeWidth="150dp"
+    android:minResizeHeight="64dp"
+    android:previewImage="@drawable/wx_partly_cloudy_day_rain"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellWidth="4"
+    android:targetCellHeight="1"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

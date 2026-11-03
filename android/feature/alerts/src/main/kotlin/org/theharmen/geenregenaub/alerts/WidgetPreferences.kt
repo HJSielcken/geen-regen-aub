@@ -41,6 +41,11 @@ class WidgetPreferences(context: Context) {
         get() = colour(KEY_TEXT_COLOR)
         set(value) = setColour(KEY_TEXT_COLOR, value)
 
+    /** Dashed lines for licht, matig and zwaar in the rain widget's graph. On unless switched off. */
+    var intensityLines: Boolean
+        get() = prefs.getBoolean(KEY_INTENSITY_LINES, true)
+        set(value) = prefs.edit { putBoolean(KEY_INTENSITY_LINES, value) }
+
     fun register(listener: SharedPreferences.OnSharedPreferenceChangeListener) =
         prefs.registerOnSharedPreferenceChangeListener(listener)
 
@@ -58,6 +63,7 @@ class WidgetPreferences(context: Context) {
         private const val KEY_BACKGROUND = "background"
         private const val KEY_BACKGROUND_COLOR = "background_color"
         private const val KEY_TEXT_COLOR = "text_color_argb"
+        private const val KEY_INTENSITY_LINES = "intensity_lines"
 
         /** The colours offered in Instellingen, for both background and text. */
         val SWATCHES: List<Int> = listOf(

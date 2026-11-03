@@ -37,6 +37,11 @@ internal val LocalWidgetPalette = staticCompositionLocalOf<WidgetPalette> {
     error("WidgetTheme missing")
 }
 
+/** The current look, for settings that are not colours (such as the rain graph's lines). */
+internal val LocalWidgetLook = staticCompositionLocalOf<WidgetLook> {
+    error("WidgetTheme missing")
+}
+
 /** Everything about the widgets' look, read once per redraw. */
 internal class WidgetLook(
     val background: WidgetBackground,
@@ -46,6 +51,8 @@ internal class WidgetLook(
     val textColor: Color?,
     /** The app's theme: licht/donker/systeem and wallpaper colours, as chosen in Instellingen. */
     val theme: ColorProviders,
+    /** Labelled lines for licht, matig and zwaar in the rain graph. */
+    val intensityLines: Boolean,
 ) {
     companion object {
         fun load(context: Context): WidgetLook {
@@ -63,6 +70,7 @@ internal class WidgetLook(
                 backgroundColor = prefs.backgroundColor?.let(::Color),
                 textColor = prefs.textColor?.let(::Color),
                 theme = theme,
+                intensityLines = prefs.intensityLines,
             )
         }
     }
@@ -128,7 +136,7 @@ internal fun WidgetTheme(initial: WidgetLook, content: @Composable () -> Unit) {
                 ),
             )
         }
-        CompositionLocalProvider(LocalWidgetPalette provides palette) { content() }
+        CompositionLocalProvider(LocalWidgetPalette provides palette, LocalWidgetLook provides look) { content() }
     }
 }
 
