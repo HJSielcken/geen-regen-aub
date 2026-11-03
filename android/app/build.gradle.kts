@@ -1,6 +1,8 @@
 import java.time.Duration
 import java.time.Instant
 import java.util.Properties
+import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
 
 plugins {
     alias(libs.plugins.android.application)
@@ -145,34 +147,38 @@ dependencies {
 }
 
 // After every APK build, print what takes the space (download size), biggest first.
-val reportApkSize by tasks.registering {
+val reportApkSize = tasks.register("reportApkSize") {
     val apkDir = layout.buildDirectory.dir("outputs/apk")
     doLast {
-        apkDir.get().asFile.walk().filter { it.extension == "apk" }.forEach { apk ->
-            java.util.zip.ZipFile(apk).use { zip ->
-                val entries = zip.entries().toList().filterNot { it.isDirectory }
-                fun group(name: String) = when {
-                    name.startsWith("lib/") -> "native libraries"
-                    name.endsWith(".dex") -> "code (dex)"
-                    name.startsWith("res/") || name == "resources.arsc" -> "resources"
-                    name.startsWith("assets/") -> "assets"
-                    else -> "other"
-                }
-                fun mb(bytes: Long) = "%.2f MB".format(bytes / 1_048_576.0)
+        fun mb(bytes: Long): String = "%.2f MB".format(bytes / 1_048_576.0)
+        fun group(name: String): String = when {
+            name.startsWith("lib/") -> "native libraries"
+            name.endsWith(".dex") -> "code (dex)"
+            name.startsWith("res/") || name == "resources.arsc" -> "resources"
+            name.startsWith("assets/") -> "assets"
+            else -> "other"
+        }
+        val apks = apkDir.get().asFile.walk().filter { file -> file.extension == "apk" }.toList()
+        for (apk in apks) {
+            ZipFile(apk).use { zip ->
+                val files: List<ZipEntry> = zip.entries().toList().filter { entry -> !entry.isDirectory }
                 println("APK ${apk.name}: ${mb(apk.length())}")
-                entries.groupBy { group(it.name) }
-                    .mapValues { (_, list) -> list.sumOf { it.compressedSize } to list.sumOf { it.size } }
-                    .entries.sortedByDescending { it.value.first }
-                    .forEach { (name, sizes) -> println("  $name: ${mb(sizes.first)} in the APK, ${mb(sizes.second)} unpacked") }
+                val groups: Map<String, List<ZipEntry>> = files.groupBy { entry -> group(entry.name) }
+                for (name in groups.keys.sortedByDescending { key -> groups.getValue(key).sumOf { e -> e.compressedSize } }) {
+                    val list = groups.getValue(name)
+                    val packed = list.sumOf { e -> e.compressedSize }
+                    val unpacked = list.sumOf { e -> e.size }
+                    println("  $name: ${mb(packed)} in the APK, ${mb(unpacked)} unpacked")
+                }
                 println("  Largest files:")
-                entries.sortedByDescending { it.compressedSize }.take(12).forEach {
-                    val stored = if (it.method == java.util.zip.ZipEntry.STORED) " (stored uncompressed)" else ""
-                    println("    ${mb(it.compressedSize)}  ${it.name}$stored")
+                for (entry in files.sortedByDescending { e -> e.compressedSize }.take(12)) {
+                    val stored = if (entry.method == ZipEntry.STORED) " (stored uncompressed)" else ""
+                    println("    ${mb(entry.compressedSize)}  ${entry.name}$stored")
                 }
             }
         }
     }
 }
-tasks.matching { it.name == "assembleRelease" || it.name == "assembleDebug" }.configureEach {
+tasks.matching { task -> task.name == "assembleRelease" || task.name == "assembleDebug" }.configureEach {
     finalizedBy(reportApkSize)
 }
