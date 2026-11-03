@@ -102,3 +102,12 @@ def test_radar_requires_secret():
 def test_radar_unavailable_before_the_first_file():
     response = client().get("/v1/radar", headers={SECRET_HEADER: "s3cret"})
     assert response.status_code == 503
+
+
+def test_json_answers_are_gzipped_when_asked():
+    response = client().get(
+        "/v1/rain", params={"lat": 52.1, "lon": 5.1}, headers={SECRET_HEADER: "s3cret", "Accept-Encoding": "gzip"}
+    )
+    assert response.status_code == 200
+    assert response.headers["content-encoding"] == "gzip"
+    assert int(response.headers["content-length"]) < len(response.content)
