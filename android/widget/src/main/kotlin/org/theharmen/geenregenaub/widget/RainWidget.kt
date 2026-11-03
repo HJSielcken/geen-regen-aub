@@ -116,9 +116,7 @@ class RainWidget : GlanceAppWidget() {
                 val estimate = (size.height - 24.dp - 16.dp - axis).coerceAtLeast(24.dp)
                 Graph(graph, state.headline(context), size.width - 32.dp, estimate)
                 if (withAxis) {
-                    // With the intensity labels on, the time axis ends where the curve ends.
-                    val axisEnd = if (LocalWidgetLook.current.intensityLines) RainGraphRenderer.GUIDE_GUTTER_DP.dp else 0.dp
-                    Row(modifier = GlanceModifier.fillMaxWidth().padding(top = 2.dp, end = axisEnd)) {
+                    Row(modifier = GlanceModifier.fillMaxWidth().padding(top = 2.dp)) {
                         AxisLabel(context.getString(R.string.widget_axis_now), TextAlign.Start)
                         AxisLabel(context.getString(R.string.widget_axis_one_hour), TextAlign.Center)
                         AxisLabel(context.getString(R.string.widget_axis_two_hours), TextAlign.End)

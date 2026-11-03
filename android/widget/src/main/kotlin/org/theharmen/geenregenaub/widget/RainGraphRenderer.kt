@@ -26,9 +26,6 @@ internal object RainGraphRenderer {
     private const val MAX_HEIGHT_PX = 400
     private const val POINTS = 25
 
-    /** Room on the right for the "zwaar" / "matig" / "licht" labels, when they are shown. */
-    const val GUIDE_GUTTER_DP = 38
-
     /** Labelled lines where matig and zwaar begin, with "licht" along the bottom. */
     class Guides(
         val lineColor: Int,
@@ -56,8 +53,8 @@ internal object RainGraphRenderer {
 
         val baselineHeight = max(1f, d)
         val chartBottom = h - baselineHeight
-        // With labels, the curve keeps clear of the label column on the right.
-        val chartRight = if (guides != null) max(1f, w - GUIDE_GUTTER_DP * d) else w.toFloat()
+        // The curve and the guide lines run the full width; the labels sit on top of their lines.
+        val chartRight = w.toFloat()
         if (guides != null) drawGuides(canvas, guides, chartRight, chartBottom, d)
 
         // Smooth area through one point per 5 minutes; dry steps sit on the baseline.
@@ -132,12 +129,14 @@ internal object RainGraphRenderer {
         canvas.drawLine(0f, yHeavy, chartRight, yHeavy, line)
         canvas.drawLine(0f, yModerate, chartRight, yModerate, line)
 
-        // Each label sits on its line; in a low graph they are pushed apart so they never overlap.
+        // Each label sits just above its line at the right; in a low graph they are pushed apart.
         val half = textHeight / 2
-        val lightY = chartBottom - half
-        val moderateY = min(yModerate, lightY - textHeight)
-        val heavyY = max(half, min(yHeavy, moderateY - textHeight))
-        val x = chartRight + 4 * d
+        val gap = 2 * d
+        val lightY = chartBottom - half - gap
+        val moderateY = min(yModerate - half - gap, lightY - textHeight)
+        val heavyY = max(half, min(yHeavy - half - gap, moderateY - textHeight))
+        text.textAlign = Paint.Align.RIGHT
+        val x = chartRight - 2 * d
         fun label(value: String, centreY: Float) {
             val baseline = centreY - (text.fontMetrics.ascent + text.fontMetrics.descent) / 2
             canvas.drawText(value, x, baseline, text)
