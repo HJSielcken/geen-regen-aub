@@ -22,3 +22,9 @@
 # on start (in WorkManager's start-up provider, before Sentry runs). 0.1.0 shipped like that.
 -keep class androidx.room.RoomDatabase
 -keep class * extends androidx.room.RoomDatabase { <init>(); }
+
+# Glance finds a widget's instances on the home screen by its GlanceAppWidget class name. R8
+# merged our widget classes into one, so redrawing one kind of widget redrew all of them with
+# the same content (the clock widget kept turning into "Weer nu"). Keep each one distinct.
+-keep class * extends androidx.glance.appwidget.GlanceAppWidget
+-keep class * extends androidx.glance.appwidget.GlanceAppWidgetReceiver

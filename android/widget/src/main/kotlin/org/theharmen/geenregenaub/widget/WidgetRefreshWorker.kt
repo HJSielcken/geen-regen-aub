@@ -1,7 +1,6 @@
 package org.theharmen.geenregenaub.widget
 
 import android.content.Context
-import androidx.glance.appwidget.updateAll
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -37,7 +36,7 @@ class WidgetRefreshWorker(context: Context, params: WorkerParameters) : Coroutin
             null -> runCatching { repository.latest() }.getOrNull()
         }
 
-        RainWidget().updateAll(context)
+        updateWidgets(context, RainWidget(), RainWidgetReceiver::class.java)
 
         // The weather forecast follows the place the rain fetch just resolved; it only fetches
         // when its cache is older than half an hour, so most runs cost nothing.
