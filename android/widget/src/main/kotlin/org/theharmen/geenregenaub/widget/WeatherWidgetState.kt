@@ -1,9 +1,12 @@
 package org.theharmen.geenregenaub.widget
 
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import androidx.glance.appwidget.GlanceAppWidget
-import androidx.glance.appwidget.updateAll
+import androidx.glance.appwidget.GlanceAppWidgetManager
+import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -22,7 +25,13 @@ import java.time.ZoneId
 object WeatherWidgets {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    internal fun all(): List<GlanceAppWidget> = listOf(CurrentWeatherWidget(), HourlyWeatherWidget(), DailyWeatherWidget(), ClockWidget())
+    /** Each widget with the receiver that holds its instances on the home screen. */
+    private fun all(): List<Pair<GlanceAppWidget, Class<out GlanceAppWidgetReceiver>>> = listOf(
+        CurrentWeatherWidget() to ForecastWidgetReceiver::class.java,
+        HourlyWeatherWidget() to HourlyWeatherWidgetReceiver::class.java,
+        DailyWeatherWidget() to DailyWeatherWidgetReceiver::class.java,
+        ClockWidget() to ClockWidgetReceiver::class.java,
+    )
 
     /** Redraw every weather widget, e.g. after the app fetched a new forecast. */
     fun updateAllAsync(context: Context) {
@@ -31,7 +40,7 @@ object WeatherWidgets {
     }
 
     suspend fun updateAll(context: Context) {
-        all().forEach { widget -> runCatching { widget.updateAll(context) } }
+        all().forEach { (widget, receiver) -> runCatching { updateWidgets(context, widget, receiver) } }
     }
 
     internal suspend fun load(context: Context): WeatherWidgetState? {
@@ -43,6 +52,22 @@ object WeatherWidgets {
     internal fun openIntent(context: Context): Intent =
         (context.packageManager.getLaunchIntentForPackage(context.packageName) ?: Intent())
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+}
+
+/**
+ * Redraw the widgets of one receiver with [widget]. Unlike Glance's updateAll, this does not
+ * find the widgets through the widget's class name: in the minified release build R8 merged
+ * the widget classes, so updateAll drew the "Weer nu" widget over the clock widgets.
+ */
+internal suspend fun updateWidgets(
+    context: Context,
+    widget: GlanceAppWidget,
+    receiver: Class<out GlanceAppWidgetReceiver>,
+) {
+    val glance = GlanceAppWidgetManager(context)
+    AppWidgetManager.getInstance(context)
+        .getAppWidgetIds(ComponentName(context, receiver))
+        .forEach { id -> widget.update(context, glance.getGlanceIdBy(id)) }
 }
 
 /** Everything the weather widgets show, worked out before composing. */

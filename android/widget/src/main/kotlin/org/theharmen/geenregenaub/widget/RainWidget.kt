@@ -36,7 +36,6 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
-import androidx.glance.appwidget.updateAll
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -190,7 +189,7 @@ class RainWidget : GlanceAppWidget() {
         /** Redraw every rain widget, e.g. after a colour change in Instellingen. */
         fun updateAllAsync(context: Context) {
             val app = context.applicationContext
-            scope.launch { runCatching { RainWidget().updateAll(app) } }
+            scope.launch { runCatching { updateWidgets(app, RainWidget(), RainWidgetReceiver::class.java) } }
         }
     }
 }
