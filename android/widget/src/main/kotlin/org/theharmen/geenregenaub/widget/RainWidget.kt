@@ -88,16 +88,19 @@ class RainWidget : GlanceAppWidget() {
             .fillMaxSize()
             .background(palette.background)
             .cornerRadius(20.dp)
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            // Only vertical padding: the graph runs edge to edge, the texts get their own side padding.
+            .padding(vertical = 8.dp)
         if (launch != null) modifier = modifier.clickable(actionStartActivity(launch))
 
         val withAxis = size.height >= 100.dp
         val graph = state.graph
+        val sides = GlanceModifier.padding(horizontal = 16.dp)
         Column(modifier = modifier) {
             if (graph == null) {
                 // No forecast to draw: say why instead.
                 Text(
                     text = state.headline(context),
+                    modifier = sides,
                     maxLines = 2,
                     style = TextStyle(color = palette.text, fontSize = 15.sp, fontWeight = FontWeight.Bold),
                 )
@@ -105,6 +108,7 @@ class RainWidget : GlanceAppWidget() {
                     Spacer(GlanceModifier.height(4.dp))
                     Text(
                         text = context.getString(R.string.widget_no_data_detail),
+                        modifier = sides,
                         maxLines = 2,
                         style = TextStyle(color = palette.textVariant, fontSize = 13.sp),
                     )
@@ -114,9 +118,9 @@ class RainWidget : GlanceAppWidget() {
                 // Just the graph: no "Droog de komende 2 uur" above it.
                 val axis = if (withAxis) 16.dp else 0.dp
                 val estimate = (size.height - 24.dp - 16.dp - axis).coerceAtLeast(24.dp)
-                Graph(graph, state.headline(context), size.width - 32.dp, estimate)
+                Graph(graph, state.headline(context), size.width, estimate)
                 if (withAxis) {
-                    Row(modifier = GlanceModifier.fillMaxWidth().padding(top = 2.dp)) {
+                    Row(modifier = GlanceModifier.fillMaxWidth().padding(start = 16.dp, top = 2.dp, end = 16.dp)) {
                         AxisLabel(context.getString(R.string.widget_axis_now), TextAlign.Start)
                         AxisLabel(context.getString(R.string.widget_axis_one_hour), TextAlign.Center)
                         AxisLabel(context.getString(R.string.widget_axis_two_hours), TextAlign.End)
@@ -125,6 +129,7 @@ class RainWidget : GlanceAppWidget() {
             }
             Text(
                 text = state.footer(context),
+                modifier = sides,
                 maxLines = 1,
                 style = TextStyle(color = palette.textVariant, fontSize = 11.sp),
             )

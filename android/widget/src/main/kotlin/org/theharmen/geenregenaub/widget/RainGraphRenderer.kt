@@ -51,7 +51,7 @@ internal object RainGraphRenderer {
         val bitmap = createBitmap(w, h)
         val canvas = Canvas(bitmap)
 
-        val baselineHeight = max(1f, d)
+        val baselineHeight = max(0.75f, 0.5f * d)
         val chartBottom = h - baselineHeight
         // The curve and the guide lines run the full width; the labels sit on top of their lines.
         val chartRight = w.toFloat()
@@ -115,7 +115,7 @@ internal object RainGraphRenderer {
     private fun drawGuides(canvas: Canvas, guides: Guides, chartRight: Float, chartBottom: Float, d: Float) {
         val line = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = guides.lineColor
-            strokeWidth = max(1f, 0.5f * d)
+            strokeWidth = max(0.5f, 0.3f * d) // a hairline
             style = Paint.Style.STROKE
             pathEffect = android.graphics.DashPathEffect(floatArrayOf(3 * d, 3 * d), 0f)
         }
@@ -136,7 +136,8 @@ internal object RainGraphRenderer {
         val moderateY = min(yModerate - half - gap, lightY - textHeight)
         val heavyY = max(half, min(yHeavy - half - gap, moderateY - textHeight))
         text.textAlign = Paint.Align.RIGHT
-        val x = chartRight - 2 * d
+        // In line with the widget's text, clear of its rounded corner.
+        val x = chartRight - 16 * d
         fun label(value: String, centreY: Float) {
             val baseline = centreY - (text.fontMetrics.ascent + text.fontMetrics.descent) / 2
             canvas.drawText(value, x, baseline, text)

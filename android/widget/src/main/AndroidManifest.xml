@@ -11,10 +11,33 @@
         <package android:name="com.android.deskclock" />
         <package android:name="com.oneplus.deskclock" />
         <package android:name="com.coloros.alarmclock" />
+        <package android:name="com.oplus.alarmclock" />
         <package android:name="com.miui.clock" />
+        <package android:name="com.huawei.deskclock" />
+        <package android:name="com.hihonor.deskclock" />
+        <package android:name="com.motorola.blur.alarmclock" />
+        <package android:name="com.lge.clock" />
+        <package android:name="com.sonyericsson.organizer" />
+        <package android:name="com.asus.deskclock" />
+        <package android:name="com.vivo.alarmclock" />
+        <package android:name="com.bbk.alarmclock" />
+        <package android:name="com.nothing.deskclock" />
+        <!-- Any other clock app, found by name among the launchable apps. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
     </queries>
 
     <application>
+        <!-- The clock widget's tap lands here first, then opens the phone's clock app. -->
+        <activity
+            android:name=".ClockLauncherActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <receiver
             android:name=".RainWidgetReceiver"
             android:exported="true"
