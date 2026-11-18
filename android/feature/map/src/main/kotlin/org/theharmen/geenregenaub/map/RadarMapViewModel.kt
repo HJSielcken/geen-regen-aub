@@ -225,14 +225,13 @@ class RadarMapViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    /** Saves the point as [name]; [makeDefault] also makes it the place the app always shows. */
-    fun save(name: String, makeDefault: Boolean) {
+    /** Saves the point as [name]; the star in the place sheet can make it the default. */
+    fun save(name: String) {
         val point = _state.value.point ?: return
         val place = point.place
         val savedName = name.trim().ifEmpty { place.name }
         viewModelScope.launch {
             places.saveFavorite(place, savedName)
-            if (makeDefault) places.choose(place.copy(name = savedName))
             _state.update { it.copy(savedName = savedName) }
         }
     }

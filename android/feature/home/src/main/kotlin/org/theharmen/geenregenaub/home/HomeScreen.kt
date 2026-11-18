@@ -130,10 +130,10 @@ fun HomeScreen(
         onOpenSettings = onOpenSettings,
         onOpenMap = onOpenMap,
         onUseCurrentLocation = {
-            viewModel.useCurrentLocation()
+            viewModel.showCurrentLocation()
             if (!hasPermission) permissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
         },
-        onChooseFavorite = viewModel::choose,
+        onChooseFavorite = viewModel::show,
         onReturnToDefault = viewModel::returnToDefault,
         modifier = modifier,
         bottomContent = bottomContent,
@@ -143,22 +143,27 @@ fun HomeScreen(
     if (showPlaces) {
         PlaceSheet(
             settings = state.settings,
+            temporary = state.temporaryPlace,
             favorites = state.favorites,
             query = query,
             results = results,
             onQueryChange = viewModel::onQueryChange,
             onUseCurrentLocation = {
                 showPlaces = false
-                viewModel.useCurrentLocation()
+                viewModel.showCurrentLocation()
                 if (!hasPermission) permissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
             },
             onChoose = { place ->
                 showPlaces = false
-                viewModel.choose(place)
+                viewModel.show(place)
             },
-            onSaveFavorite = { place, name, choose ->
-                if (choose) showPlaces = false
-                viewModel.saveFavorite(place, name, choose)
+            onSetDefault = { place ->
+                viewModel.setDefault(place)
+                if (place == null && !hasPermission) permissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+            },
+            onSaveFavorite = { place, name, show ->
+                if (show) showPlaces = false
+                viewModel.saveFavorite(place, name, show)
             },
             onRemoveFavorite = viewModel::removeFavorite,
             onPickOnMap = onPickOnMap?.let { pick ->
@@ -265,6 +270,8 @@ private fun Header(
         val temporary = state.temporaryPlace
         val following = state.settings.useCurrentLocation && temporary == null
         val label = when {
+            temporary?.isCurrentLocation == true -> place?.takeIf { it.isCurrentLocation }?.shortName()
+                ?: stringResource(R.string.places_current)
             temporary != null -> temporary.shortName()
             !following -> state.settings.chosenPlace?.shortName() ?: stringResource(R.string.home_choose_place)
             place != null -> place.shortName()
@@ -275,7 +282,9 @@ private fun Header(
             label = { Text(label, maxLines = 1) },
             leadingIcon = {
                 Icon(
-                    painterResource(if (following) R.drawable.ic_my_location else R.drawable.ic_place),
+                    painterResource(
+                        if (following || temporary?.isCurrentLocation == true) R.drawable.ic_my_location else R.drawable.ic_place,
+                    ),
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
                 )
@@ -313,7 +322,12 @@ private fun Header(
 @Composable
 private fun FavoriteChips(state: HomeUiState, onUseCurrentLocation: () -> Unit, onChoose: (Place) -> Unit) {
     val temporary = state.temporaryPlace
-    val chosen = temporary ?: state.settings.chosenPlace?.takeIf { !state.settings.useCurrentLocation }
+    val showingHere = if (temporary != null) temporary.isCurrentLocation else state.settings.useCurrentLocation
+    val chosen = if (temporary != null) {
+        temporary.takeIf { !it.isCurrentLocation }
+    } else {
+        state.settings.chosenPlace?.takeIf { !state.settings.useCurrentLocation }
+    }
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier
@@ -321,7 +335,7 @@ private fun FavoriteChips(state: HomeUiState, onUseCurrentLocation: () -> Unit, 
             .horizontalScroll(rememberScrollState()),
     ) {
         FilterChip(
-            selected = state.settings.useCurrentLocation && temporary == null,
+            selected = showingHere,
             onClick = onUseCurrentLocation,
             label = { Text(stringResource(R.string.places_here)) },
             leadingIcon = {
@@ -367,7 +381,10 @@ private fun TemporaryPlaceBar(place: Place, settings: LocationSettings, zone: Zo
             Icon(painterResource(R.drawable.ic_map), contentDescription = null, modifier = Modifier.size(22.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    stringResource(R.string.home_temporary_title, place.shortName()),
+                    stringResource(
+                        R.string.home_temporary_title,
+                        if (place.isCurrentLocation) stringResource(R.string.places_here) else place.shortName(),
+                    ),
                     style = MaterialTheme.typography.titleSmall,
                 )
                 settings.temporaryUntil?.let { until ->

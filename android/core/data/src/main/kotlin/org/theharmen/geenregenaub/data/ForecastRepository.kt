@@ -41,8 +41,15 @@ interface PlaceRepository {
     suspend fun useCurrentLocation()
 
     /**
+     * Makes [place] the default, the place the app always comes back to; null makes it the
+     * phone's location. A temporary place keeps showing, unless it is this same place.
+     */
+    suspend fun setDefault(place: Place?)
+
+    /**
      * Shows the forecast for [place] for a while (an hour by default) without changing the
-     * default; after that, or after [clearTemporary], the default place is back.
+     * default; after that, or after [clearTemporary], the default place is back. A place with
+     * [Place.isCurrentLocation] means: follow the phone for that while.
      */
     suspend fun chooseTemporarily(place: Place, duration: Duration = TEMPORARY_DURATION)
 

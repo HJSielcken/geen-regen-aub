@@ -175,9 +175,9 @@ fun RadarMapScreen(
     if (naming && point != null) {
         SavePointDialog(
             initial = point.name ?: "",
-            onConfirm = { name, makeDefault ->
+            onConfirm = { name ->
                 naming = false
-                viewModel.save(name, makeDefault)
+                viewModel.save(name)
             },
             onDismiss = { naming = false },
         )

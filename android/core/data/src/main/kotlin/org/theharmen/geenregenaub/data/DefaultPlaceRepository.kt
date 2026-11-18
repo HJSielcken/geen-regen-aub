@@ -24,8 +24,15 @@ internal class DefaultPlaceRepository(
     override suspend fun useCurrentLocation() =
         store.saveLocationSettings(useCurrent = true, chosen = null, clearTemporary = true)
 
+    override suspend fun setDefault(place: Place?) {
+        val temporary = store.locationSettings.first().activeTemporary(clock.instant())
+        val sameAsTemporary = temporary != null &&
+            if (place == null) temporary.isCurrentLocation else !temporary.isCurrentLocation && temporary.isSameSpot(place)
+        store.saveLocationSettings(useCurrent = place == null, chosen = place, clearTemporary = sameAsTemporary)
+    }
+
     override suspend fun chooseTemporarily(place: Place, duration: Duration) =
-        store.saveTemporaryPlace(place.copy(isCurrentLocation = false), until = clock.instant().plus(duration))
+        store.saveTemporaryPlace(place, until = clock.instant().plus(duration))
 
     override suspend fun clearTemporary() = store.clearTemporaryPlace()
 
@@ -50,7 +57,7 @@ internal class DefaultPlaceRepository(
             store.saveLocationSettings(useCurrent = settings.useCurrentLocation, chosen = saved)
         }
         // A temporary place that is now saved shows its new name too.
-        if (settings.activeTemporary(clock.instant())?.isSameSpot(saved) == true) {
+        if (settings.activeTemporary(clock.instant())?.takeIf { !it.isCurrentLocation }?.isSameSpot(saved) == true) {
             store.saveTemporaryPlace(saved, until = null)
         }
     }

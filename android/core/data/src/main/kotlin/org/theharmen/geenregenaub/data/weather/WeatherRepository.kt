@@ -133,7 +133,10 @@ internal class DefaultWeatherRepository(
      */
     private suspend fun resolvePlace(): Place? {
         val settings = places.settings.first()
-        settings.activeTemporary(clock.instant())?.let { return it }
+        val temporary = settings.activeTemporary(clock.instant())
+        if (temporary != null) {
+            return if (temporary.isCurrentLocation) rain.latest()?.place?.takeIf { it.isCurrentLocation } else temporary
+        }
         if (!settings.useCurrentLocation) settings.chosenPlace?.let { return it }
         return rain.latest()?.place ?: settings.chosenPlace
     }

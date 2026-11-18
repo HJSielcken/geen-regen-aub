@@ -15,7 +15,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
@@ -35,11 +34,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -263,46 +260,27 @@ internal fun PickHeader(onBack: () -> Unit, modifier: Modifier = Modifier) {
     }
 }
 
-/** Name the point, and optionally make it the place the app always shows. */
+/** Name the point before saving it. */
 @Composable
-internal fun SavePointDialog(initial: String, onConfirm: (name: String, makeDefault: Boolean) -> Unit, onDismiss: () -> Unit) {
+internal fun SavePointDialog(initial: String, onConfirm: (name: String) -> Unit, onDismiss: () -> Unit) {
     var name by remember { mutableStateOf(initial) }
-    var makeDefault by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.map_save_title)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it.take(40) },
-                    label = { Text(stringResource(R.string.map_save_name)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(
-                        capitalization = KeyboardCapitalization.Sentences,
-                        imeAction = ImeAction.Done,
-                    ),
-                    keyboardActions = KeyboardActions(onDone = { onConfirm(name, makeDefault) }),
-                )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .toggleable(value = makeDefault, role = Role.Checkbox, onValueChange = { makeDefault = it }),
-                ) {
-                    Checkbox(checked = makeDefault, onCheckedChange = null)
-                    Column(Modifier.padding(start = 12.dp)) {
-                        Text(stringResource(R.string.map_save_default), style = MaterialTheme.typography.bodyLarge)
-                        Text(
-                            stringResource(R.string.map_save_default_detail),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it.take(40) },
+                label = { Text(stringResource(R.string.map_save_name)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Sentences,
+                    imeAction = ImeAction.Done,
+                ),
+                keyboardActions = KeyboardActions(onDone = { onConfirm(name) }),
+            )
         },
-        confirmButton = { TextButton(onClick = { onConfirm(name, makeDefault) }) { Text(stringResource(R.string.map_save_confirm)) } },
+        confirmButton = { TextButton(onClick = { onConfirm(name) }) { Text(stringResource(R.string.map_save_confirm)) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.map_save_cancel)) } },
     )
 }

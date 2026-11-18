@@ -44,8 +44,9 @@ import org.theharmen.geenregenaub.data.isSameSpot
 private data class NameRequest(val place: Place, val isRename: Boolean)
 
 /**
- * Bottom sheet to follow the phone's location, pick one of the saved places, or find a new place
- * by search. The star on a search result saves it as a favourite.
+ * Bottom sheet in three parts: the phone's location, the saved places, and finding another place
+ * (on the map, or by search). Tapping a place shows it; the star marks the default place, the one
+ * the app always comes back to. The place showing now is highlighted.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,14 +58,20 @@ internal fun PlaceSheet(
     onQueryChange: (String) -> Unit,
     onUseCurrentLocation: () -> Unit,
     onChoose: (Place) -> Unit,
-    onSaveFavorite: (place: Place, name: String, choose: Boolean) -> Unit,
+    onSaveFavorite: (place: Place, name: String, show: Boolean) -> Unit,
     onRemoveFavorite: (Place) -> Unit,
     onDismiss: () -> Unit,
+    /** A place shown for a while instead of the default, if any. */
+    temporary: Place? = null,
+    /** Makes a place the default; null makes it the phone's location. */
+    onSetDefault: (Place?) -> Unit = {},
     /** Opens the radar map to pick a point; null hides the option. */
     onPickOnMap: (() -> Unit)? = null,
 ) {
     var naming by remember { mutableStateOf<NameRequest?>(null) }
-    val chosen = settings.chosenPlace?.takeIf { !settings.useCurrentLocation }
+    val defaultPlace = settings.chosenPlace?.takeIf { !settings.useCurrentLocation }
+    val showingHere = temporary?.isCurrentLocation ?: settings.useCurrentLocation
+    val showing = if (temporary != null) temporary.takeIf { !it.isCurrentLocation } else defaultPlace
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -80,54 +87,66 @@ internal fun PlaceSheet(
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
             )
+
+            SectionTitle(stringResource(R.string.places_mine))
+            val hereName = stringResource(R.string.places_current)
             ListItem(
-                headlineContent = { Text(stringResource(R.string.places_current)) },
+                headlineContent = { Text(hereName) },
                 supportingContent = { Text(stringResource(R.string.places_current_detail)) },
                 leadingContent = { Icon(painterResource(R.drawable.ic_my_location), contentDescription = null) },
-                colors = selectedColors(settings.useCurrentLocation),
+                trailingContent = {
+                    DefaultStar(
+                        name = hereName,
+                        isDefault = settings.useCurrentLocation,
+                        onToggle = { if (!settings.useCurrentLocation) onSetDefault(null) },
+                    )
+                },
+                colors = selectedColors(showingHere),
                 modifier = Modifier.clickable(onClick = onUseCurrentLocation),
             )
-            if (onPickOnMap != null) {
-                ListItem(
-                    headlineContent = {
-                        Text(stringResource(R.string.places_pick_on_map), color = MaterialTheme.colorScheme.primary)
-                    },
-                    supportingContent = { Text(stringResource(R.string.places_pick_on_map_detail)) },
-                    leadingContent = {
-                        Icon(
-                            painterResource(R.drawable.ic_map),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    },
-                    modifier = Modifier.clickable(onClick = onPickOnMap),
-                )
-            }
 
-            if (favorites.isNotEmpty()) {
+            // Saved places, plus a default or temporary place that isn't saved yet (to save it).
+            val unsaved = listOfNotNull(defaultPlace, temporary?.takeIf { !it.isCurrentLocation })
+                .filter { place -> favorites.none { it.isSameSpot(place) } }
+                .distinctBy { it.lat to it.lon }
+            if (favorites.isNotEmpty() || unsaved.isNotEmpty()) {
                 SectionTitle(stringResource(R.string.places_saved))
                 favorites.forEach { place ->
+                    val isDefault = defaultPlace?.isSameSpot(place) == true
                     FavoriteRow(
                         place = place,
-                        selected = chosen?.isSameSpot(place) == true,
+                        selected = showing?.isSameSpot(place) == true,
+                        isDefault = isDefault,
                         onChoose = onChoose,
+                        onToggleDefault = { onSetDefault(if (isDefault) null else place) },
                         onRename = { naming = NameRequest(place, isRename = true) },
                         onRemove = { onRemoveFavorite(place) },
                     )
                 }
+                unsaved.forEach { place ->
+                    val isDefault = defaultPlace?.isSameSpot(place) == true
+                    PlaceRow(
+                        place = place,
+                        selected = showing?.isSameSpot(place) == true,
+                        onChoose = onChoose,
+                        onSave = { naming = NameRequest(place, isRename = false) },
+                        isDefault = isDefault,
+                        onToggleDefault = { onSetDefault(if (isDefault) null else place) },
+                    )
+                }
             }
 
-            // A chosen place that isn't saved yet: offer to save it.
-            if (chosen != null && favorites.none { it.isSameSpot(chosen) }) {
-                PlaceRow(
-                    place = chosen,
-                    selected = true,
-                    onChoose = onChoose,
-                    onSave = { naming = NameRequest(chosen, isRename = false) },
+            HorizontalDivider(Modifier.padding(top = 12.dp, bottom = 4.dp))
+            SectionTitle(stringResource(R.string.places_other))
+            if (onPickOnMap != null) {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.places_pick_on_map)) },
+                    supportingContent = { Text(stringResource(R.string.places_pick_on_map_detail)) },
+                    leadingContent = { Icon(painterResource(R.drawable.ic_map), contentDescription = null) },
+                    trailingContent = { Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null) },
+                    modifier = Modifier.clickable(onClick = onPickOnMap),
                 )
             }
-
-            HorizontalDivider(Modifier.padding(vertical = 8.dp))
             OutlinedTextField(
                 value = query,
                 onValueChange = onQueryChange,
@@ -136,7 +155,7 @@ internal fun PlaceSheet(
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
+                    .padding(horizontal = 24.dp, vertical = 4.dp),
             )
             when (results) {
                 SearchResults.Idle -> Unit
@@ -166,7 +185,7 @@ internal fun PlaceSheet(
             isRename = request.isRename,
             onConfirm = { name ->
                 naming = null
-                onSaveFavorite(request.place, name, !request.isRename)
+                onSaveFavorite(request.place, name, false)
             },
             onDismiss = { naming = null },
         )
@@ -181,17 +200,39 @@ private fun selectedColors(selected: Boolean) =
         ListItemDefaults.colors()
     }
 
+/** Filled star: the default place. Outline: tap to make this the default. */
+@Composable
+private fun DefaultStar(name: String, isDefault: Boolean, onToggle: () -> Unit) {
+    IconButton(onClick = onToggle) {
+        Icon(
+            painterResource(if (isDefault) R.drawable.ic_star else R.drawable.ic_star_outline),
+            contentDescription = stringResource(
+                if (isDefault) R.string.places_is_default_named else R.string.places_make_default_named,
+                name,
+            ),
+            tint = if (isDefault) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
 @Composable
 private fun FavoriteRow(
     place: Place,
     selected: Boolean,
+    isDefault: Boolean,
     onChoose: (Place) -> Unit,
+    onToggleDefault: () -> Unit,
     onRename: () -> Unit,
     onRemove: () -> Unit,
 ) {
     ListItem(
         headlineContent = { Text(place.shortName()) },
-        leadingContent = { Icon(painterResource(R.drawable.ic_star), contentDescription = null) },
+        supportingContent = if (isDefault) {
+            { Text(stringResource(R.string.places_default)) }
+        } else {
+            null
+        },
+        leadingContent = { Icon(painterResource(R.drawable.ic_place), contentDescription = null) },
         trailingContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onRename) {
@@ -206,6 +247,7 @@ private fun FavoriteRow(
                         contentDescription = stringResource(R.string.places_remove_named, place.shortName()),
                     )
                 }
+                DefaultStar(place.shortName(), isDefault, onToggleDefault)
             }
         },
         colors = selectedColors(selected),
@@ -213,18 +255,29 @@ private fun FavoriteRow(
     )
 }
 
+/** A place that isn't saved: tap to show it, the bookmark saves it. */
 @Composable
-private fun PlaceRow(place: Place, selected: Boolean, onChoose: (Place) -> Unit, onSave: () -> Unit) {
+private fun PlaceRow(
+    place: Place,
+    selected: Boolean,
+    onChoose: (Place) -> Unit,
+    onSave: () -> Unit,
+    isDefault: Boolean = false,
+    onToggleDefault: (() -> Unit)? = null,
+) {
     ListItem(
         headlineContent = { Text(place.shortName()) },
         supportingContent = { Text(place.name) },
         leadingContent = { Icon(painterResource(R.drawable.ic_place), contentDescription = null) },
         trailingContent = {
-            IconButton(onClick = onSave) {
-                Icon(
-                    painterResource(R.drawable.ic_star_outline),
-                    contentDescription = stringResource(R.string.places_save_named, place.shortName()),
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onSave) {
+                    Icon(
+                        painterResource(R.drawable.ic_bookmark_add),
+                        contentDescription = stringResource(R.string.places_save_named, place.shortName()),
+                    )
+                }
+                if (onToggleDefault != null) DefaultStar(place.shortName(), isDefault, onToggleDefault)
             }
         },
         colors = selectedColors(selected),

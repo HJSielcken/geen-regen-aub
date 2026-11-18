@@ -33,8 +33,10 @@ internal class DefaultForecastRepository(
 
     override suspend fun refresh(): RefreshResult = mutex.withLock {
         val settings = store.locationSettings.first()
-        settings.activeTemporary(clock.instant())?.let { return fetch(it) }
-        if (!settings.useCurrentLocation) {
+        val temporary = settings.activeTemporary(clock.instant())
+        if (temporary != null && !temporary.isCurrentLocation) return fetch(temporary)
+        // A temporary "Hier" follows the phone even when the default is a fixed place.
+        if (!settings.useCurrentLocation && temporary == null) {
             val chosen = settings.chosenPlace ?: return RefreshResult.Failure(FailureReason.NO_LOCATION, latest())
             return fetch(chosen)
         }
