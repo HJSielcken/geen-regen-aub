@@ -43,7 +43,10 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
 
     val state: StateFlow<WeatherUiState> = combine(
         clock,
-        weather.cached,
+        combine(weather.cached, weather.temporaryCached, places.settings) { default, temporary, settings ->
+            // A temporary place has its own cache, so the widgets keep showing the default place.
+            settings.shown(Instant.now(), default, temporary) { it.place }
+        },
         refreshing,
         failure,
         loaded,
@@ -62,7 +65,11 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
      */
     suspend fun keepFresh() = coroutineScope {
         launch {
-            combine(rain.cachedForecast.map { it?.place }, places.settings) { place, settings -> place to settings }
+            combine(
+                rain.cachedForecast.map { it?.place },
+                rain.temporaryForecast.map { it?.place },
+                places.settings,
+            ) { place, temporaryPlace, settings -> Triple(place, temporaryPlace, settings) }
                 .distinctUntilChanged()
                 .collect { load(WeatherRepository.DEFAULT_MAX_AGE) }
         }
@@ -75,7 +82,7 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
 
     private suspend fun load(maxAge: Duration) {
         refreshing.value = true
-        val result = weather.refresh(maxAge)
+        val result = weather.refreshShown(maxAge)
         failure.value = (result as? WeatherRefreshResult.Failure)?.reason
         refreshing.value = false
         loaded.value = true

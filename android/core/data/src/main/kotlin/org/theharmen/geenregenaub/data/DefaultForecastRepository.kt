@@ -29,37 +29,56 @@ internal class DefaultForecastRepository(
 
     override val cachedForecast: Flow<CachedForecast?> = store.cachedForecast
 
+    override val temporaryForecast: Flow<CachedForecast?> = store.temporaryForecast
+
     override suspend fun latest(): CachedForecast? = store.cachedForecast.first()
 
     override suspend fun refresh(): RefreshResult = mutex.withLock {
         val settings = store.locationSettings.first()
-        settings.activeTemporary(clock.instant())?.let { return fetch(it) }
         if (!settings.useCurrentLocation) {
             val chosen = settings.chosenPlace ?: return RefreshResult.Failure(FailureReason.NO_LOCATION, latest())
-            return fetch(chosen)
+            return fetch(chosen, temporary = false)
         }
+        refreshHere(settings.chosenPlace, temporary = false)
+    }
+
+    override suspend fun refreshShown(): RefreshResult {
+        val settings = store.locationSettings.first()
+        val temporary = settings.activeTemporary(clock.instant()) ?: return refresh()
+        return mutex.withLock {
+            // A temporary "Hier" follows the phone even when the default is a fixed place.
+            if (temporary.isCurrentLocation) refreshHere(fallback = null, temporary = true) else fetch(temporary, temporary = true)
+        }
+    }
+
+    /**
+     * The forecast where the phone is, else at [fallback]. [temporary]: keep it apart from the
+     * default forecast that the widgets and alerts use.
+     */
+    private suspend fun refreshHere(fallback: Place?, temporary: Boolean): RefreshResult {
+        val latest = if (temporary) null else latest()
 
         // The phone saw itself recently: use that position, no need to wait for a new fix.
         val known = location.lastKnownLocation()
-        if (known != null && known.ageMs < RECENT_FIX_MS) return fetchHere(known.lat, known.lon)
+        if (known != null && known.ageMs < RECENT_FIX_MS) return fetchHere(known.lat, known.lon, temporary)
 
         // Otherwise ask for a fix (that can take seconds), and meanwhile show the forecast for
         // where the phone was last. Most of the time it has not moved, and then we are done.
-        coroutineScope {
+        return coroutineScope {
             val fix = async { location.freshLocation() }
             val guess = store.lastCurrentLocation.first()
             val first = when {
-                guess != null -> fetch(guess)
-                known != null -> fetchHere(known.lat, known.lon)
+                guess != null -> fetch(guess, temporary)
+                known != null -> fetchHere(known.lat, known.lon, temporary)
                 else -> null
             }
             val firstPlace = (first as? RefreshResult.Success)?.forecast?.place ?: guess
             val here = fix.await()
             when {
-                here == null -> first ?: settings.chosenPlace?.let { fetch(it) }
-                    ?: RefreshResult.Failure(FailureReason.NO_LOCATION, latest())
+                here == null -> first ?: fallback?.let { fetch(it, temporary) }
+                    ?: RefreshResult.Failure(FailureReason.NO_LOCATION, latest)
                 first is RefreshResult.Success && firstPlace != null && isNearby(firstPlace, here.first, here.second) -> first
-                else -> fetchHere(here.first, here.second)
+                else -> fetchHere(here.first, here.second, temporary)
             }
         }
     }
@@ -83,9 +102,9 @@ internal class DefaultForecastRepository(
     }
 
     /** Fetches the forecast at the phone's position, looking up the town name at the same time. */
-    private suspend fun fetchHere(lat: Double, lon: Double): RefreshResult = coroutineScope {
+    private suspend fun fetchHere(lat: Double, lon: Double, temporary: Boolean): RefreshResult = coroutineScope {
         val name = async { townName(lat, lon) }
-        val result = fetch(Place(CURRENT_LOCATION_NAME, lat, lon, isCurrentLocation = true)) { place ->
+        val result = fetch(Place(CURRENT_LOCATION_NAME, lat, lon, isCurrentLocation = true), temporary) { place ->
             // The name only labels the forecast; do not let a slow lookup hold it back for long.
             place.copy(name = withTimeoutOrNull(NAME_WAIT_MS) { name.await() } ?: nearbyName(lat, lon) ?: place.name)
         }
@@ -97,7 +116,7 @@ internal class DefaultForecastRepository(
     }
 
     /** Fetches and caches the forecast for [place]; [name] can still rename it once the rain is in. */
-    private suspend fun fetch(place: Place, name: suspend (Place) -> Place = { it }): RefreshResult = try {
+    private suspend fun fetch(place: Place, temporary: Boolean, name: suspend (Place) -> Place = { it }): RefreshResult = try {
         val response = api.rain(place.lat, place.lon)
         val named = name(place)
         if (named.isCurrentLocation) store.saveLastCurrentLocation(named)
@@ -109,12 +128,12 @@ internal class DefaultForecastRepository(
             attribution = response.attribution,
             isDemo = isDemo,
         )
-        store.saveForecast(cached)
+        if (temporary) store.saveTemporaryForecast(cached) else store.saveForecast(cached)
         RefreshResult.Success(cached)
     } catch (e: RainApiException) {
-        RefreshResult.Failure(e.reason, latest())
+        RefreshResult.Failure(e.reason, if (temporary) null else latest())
     } catch (e: IOException) {
-        RefreshResult.Failure(FailureReason.NETWORK, latest())
+        RefreshResult.Failure(FailureReason.NETWORK, if (temporary) null else latest())
     }
 
     /** The saved name for the phone's last position, when [lat], [lon] is about the same spot. */

@@ -30,8 +30,6 @@
     <string name="map_pick_hint">Sleep de kaart of houd ergens lang ingedrukt</string>
     <string name="map_save_title">Plek bewaren</string>
     <string name="map_save_name">Naam, bijvoorbeeld Thuis of Werk</string>
-    <string name="map_save_default">Maak dit mijn standaardplek</string>
-    <string name="map_save_default_detail">De app laat dan altijd deze plek zien, in plaats van je huidige locatie</string>
     <string name="map_save_confirm">Bewaar</string>
     <string name="map_save_cancel">Annuleren</string>
 </resources>

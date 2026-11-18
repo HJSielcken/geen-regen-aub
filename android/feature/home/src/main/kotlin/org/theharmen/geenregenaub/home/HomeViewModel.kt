@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
@@ -27,6 +28,7 @@ import org.theharmen.geenregenaub.data.GeenRegenData
 import org.theharmen.geenregenaub.data.LocationSettings
 import org.theharmen.geenregenaub.data.Place
 import org.theharmen.geenregenaub.data.RefreshResult
+import org.theharmen.geenregenaub.data.isSameSpot
 import java.time.Instant
 
 data class HomeUiState(
@@ -64,11 +66,13 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     val state: StateFlow<HomeUiState> = combine(
         clock,
-        forecasts.cachedForecast,
+        combine(forecasts.cachedForecast, forecasts.temporaryForecast, ::Pair),
         places.settings,
         combine(refreshing, userRefreshing, failure, loaded) { r, u, f, l -> RefreshState(r, u, f, l) },
         places.favorites,
-    ) { now, forecast, settings, refresh, favorites ->
+    ) { now, (default, temporary), settings, refresh, favorites ->
+        // A temporary place has its own cache, so the widgets keep showing the default place.
+        val forecast = settings.shown(now, default, temporary) { it.place }
         HomeUiState(
             now = now,
             forecast = forecast,
@@ -114,7 +118,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         refreshJob = viewModelScope.launch {
             refreshing.value = true
             try {
-                val result = forecasts.refresh()
+                val result = forecasts.refreshShown()
                 failure.value = (result as? RefreshResult.Failure)?.reason
                 loaded.value = true
             } finally {
@@ -146,10 +150,52 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         query.value = value
     }
 
-    fun choose(place: Place) {
+    /**
+     * Shows [place] now: the default place itself, or else temporarily, so the default stays
+     * what it is (the star in the place sheet changes that).
+     */
+    fun show(place: Place) {
         viewModelScope.launch {
-            places.choose(place)
+            val settings = places.settings.first()
+            if (!settings.useCurrentLocation && settings.chosenPlace?.isSameSpot(place) == true) {
+                places.clearTemporary()
+            } else {
+                places.chooseTemporarily(place.copy(isCurrentLocation = false))
+            }
             query.value = ""
+            refreshJob?.join()
+            refresh()
+        }
+    }
+
+    /** Shows the forecast where the phone is: the default when that is "Hier", else temporarily. */
+    fun showCurrentLocation() {
+        viewModelScope.launch {
+            if (places.settings.first().useCurrentLocation) {
+                places.clearTemporary()
+            } else {
+                places.chooseTemporarily(Place(CURRENT_LOCATION_LABEL, 0.0, 0.0, isCurrentLocation = true))
+            }
+            refreshJob?.join()
+            refresh()
+        }
+    }
+
+    /** Saves a place that isn't saved yet and makes it the default, in one go (the star on it). */
+    fun saveAsDefault(place: Place) {
+        viewModelScope.launch {
+            val saved = place.copy(name = place.shortName(), isCurrentLocation = false)
+            places.saveFavorite(saved, saved.name)
+            places.setDefault(saved)
+            refreshJob?.join()
+            refresh()
+        }
+    }
+
+    /** Makes [place] the default (null: the phone's location). */
+    fun setDefault(place: Place?) {
+        viewModelScope.launch {
+            places.setDefault(place)
             refreshJob?.join()
             refresh()
         }
@@ -164,25 +210,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun useCurrentLocation() {
-        viewModelScope.launch {
-            places.useCurrentLocation()
-            refreshJob?.join()
-            refresh()
-        }
-    }
-
-    /** Saves [place] as a favourite called [name] (or renames it), then shows its forecast. */
-    fun saveFavorite(place: Place, name: String, choose: Boolean) {
+    /** Saves [place] as a favourite called [name] (or renames it); [show] also shows its forecast. */
+    fun saveFavorite(place: Place, name: String, show: Boolean) {
         viewModelScope.launch {
             places.saveFavorite(place, name)
-            if (choose) {
-                val saved = place.copy(name = name.trim().ifEmpty { place.name }, isCurrentLocation = false)
-                places.choose(saved)
-                query.value = ""
-                refreshJob?.join()
-                refresh()
-            }
+            if (show) show(place.copy(name = name.trim().ifEmpty { place.name }, isCurrentLocation = false))
         }
     }
 
@@ -191,6 +223,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private companion object {
+        /** Name of a temporary "follow the phone"; the forecast names the town once it is in. */
+        const val CURRENT_LOCATION_LABEL = "Huidige locatie"
+
         const val AUTO_REFRESH_MS = 5 * 60 * 1000L
     }
 }

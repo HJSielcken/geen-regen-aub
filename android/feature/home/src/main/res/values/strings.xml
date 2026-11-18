@@ -39,10 +39,15 @@
     <string name="places_rename_named">Naam van %1$s wijzigen</string>
     <string name="places_remove_named">%1$s verwijderen</string>
     <string name="places_here">Hier</string>
+    <string name="places_mine">Mijn locatie</string>
+    <string name="places_other">Andere plek kiezen</string>
+    <string name="places_default">Standaardplek</string>
+    <string name="places_is_default_named">%1$s is je standaardplek</string>
+    <string name="places_make_default_named">Maak %1$s je standaardplek</string>
     <string name="places_pick_on_map">Kies op de kaart</string>
     <string name="places_pick_on_map_detail">Sleep de kaart of houd ergens lang ingedrukt</string>
     <string name="home_temporary_title">Tijdelijk: %1$s</string>
-    <string name="home_temporary_until">Gekozen op de kaart · tot %1$s</string>
+    <string name="home_temporary_until">Tot %1$s, daarna weer je standaardplek</string>
     <string name="home_temporary_back">Terug naar %1$s</string>
     <string name="cancel">Annuleren</string>
 </resources>

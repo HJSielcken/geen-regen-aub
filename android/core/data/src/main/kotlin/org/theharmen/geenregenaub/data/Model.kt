@@ -66,4 +66,20 @@ data class LocationSettings(
         val until = temporaryUntil ?: return null
         return temporaryPlace?.takeIf { now.isBefore(until) }
     }
+
+    /**
+     * What the app shows now, from the [default] cache and the [temporary] one: the temporary
+     * forecast while a temporary place lasts (null until one for that place is in), else the default.
+     */
+    fun <T> shown(now: Instant, default: T?, temporary: T?, placeOf: (T) -> Place): T? {
+        val active = activeTemporary(now) ?: return default
+        val cached = temporary ?: return null
+        val place = placeOf(cached)
+        val matches = if (active.isCurrentLocation) {
+            place.isCurrentLocation
+        } else {
+            !place.isCurrentLocation && place.isSameSpot(active)
+        }
+        return cached.takeIf { matches }
+    }
 }

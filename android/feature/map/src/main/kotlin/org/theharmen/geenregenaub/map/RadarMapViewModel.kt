@@ -14,6 +14,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -100,7 +101,9 @@ class RadarMapViewModel(application: Application) : AndroidViewModel(application
 
     init {
         viewModelScope.launch {
-            forecasts.cachedForecast.collect { cached ->
+            combine(forecasts.cachedForecast, forecasts.temporaryForecast, places.settings) { default, temporary, settings ->
+                settings.shown(Instant.now(), default, temporary) { it.place }
+            }.collect { cached ->
                 _state.update { it.copy(place = cached?.place, forecast = cached) }
             }
         }
@@ -225,14 +228,13 @@ class RadarMapViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    /** Saves the point as [name]; [makeDefault] also makes it the place the app always shows. */
-    fun save(name: String, makeDefault: Boolean) {
+    /** Saves the point as [name]; the star in the place sheet can make it the default. */
+    fun save(name: String) {
         val point = _state.value.point ?: return
         val place = point.place
         val savedName = name.trim().ifEmpty { place.name }
         viewModelScope.launch {
             places.saveFavorite(place, savedName)
-            if (makeDefault) places.choose(place.copy(name = savedName))
             _state.update { it.copy(savedName = savedName) }
         }
     }

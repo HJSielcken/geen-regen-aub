@@ -45,8 +45,11 @@ sealed interface WeatherRefreshResult {
  * It follows the same place as the rain forecast. Get it with [WeatherData.repository].
  */
 interface WeatherRepository {
-    /** The cached forecast; never hits the network. */
+    /** The cached forecast for the default place (what the widgets show); never hits the network. */
     val cached: Flow<CachedWeather?>
+
+    /** The last forecast for a temporary place; pick with [LocationSettings.shown]. */
+    val temporaryCached: Flow<CachedWeather?>
 
     suspend fun latest(): CachedWeather?
 
@@ -55,6 +58,9 @@ interface WeatherRepository {
      * [maxAge]. Pass [Duration.ZERO] to always fetch (pull to refresh).
      */
     suspend fun refresh(maxAge: Duration = DEFAULT_MAX_AGE): WeatherRefreshResult
+
+    /** Like [refresh], but for the place the app shows now: a temporary place while it lasts. */
+    suspend fun refreshShown(maxAge: Duration = DEFAULT_MAX_AGE): WeatherRefreshResult
 
     /** The weather at any [place], e.g. a point held on the radar map; not cached. Null on failure. */
     suspend fun forecastFor(place: Place): WeatherForecast?
@@ -90,23 +96,41 @@ internal class DefaultWeatherRepository(
 
     override val cached: Flow<CachedWeather?> = store.cached
 
+    override val temporaryCached: Flow<CachedWeather?> = store.temporary
+
     override suspend fun latest(): CachedWeather? = store.cached.first()
 
     override suspend fun refresh(maxAge: Duration): WeatherRefreshResult = mutex.withLock {
-        val cached = latest()
-        val place = resolvePlace() ?: return WeatherRefreshResult.Failure(FailureReason.NO_LOCATION, cached)
+        load(maxAge, resolvePlace(), latest(), temporary = false)
+    }
+
+    override suspend fun refreshShown(maxAge: Duration): WeatherRefreshResult {
+        val temporary = places.settings.first().activeTemporary(clock.instant()) ?: return refresh(maxAge)
+        return mutex.withLock {
+            // A temporary "Hier": wherever the rain side found the phone for it.
+            val place = if (temporary.isCurrentLocation) {
+                rain.temporaryForecast.first()?.place?.takeIf { it.isCurrentLocation }
+            } else {
+                temporary
+            }
+            load(maxAge, place, store.temporary.first(), temporary = true)
+        }
+    }
+
+    private suspend fun load(maxAge: Duration, place: Place?, cached: CachedWeather?, temporary: Boolean): WeatherRefreshResult {
+        place ?: return WeatherRefreshResult.Failure(FailureReason.NO_LOCATION, cached)
         val now = clock.instant()
         if (cached != null && cached.place.sameAs(place) && Duration.between(cached.fetchedAt, now) < maxAge) {
             return WeatherRefreshResult.Success(cached)
         }
-        try {
+        return try {
             val body = api.forecastJson(place.lat, place.lon)
             val forecast = OpenMeteoJson.parse(body)
             // Air quality is extra: if it fails, keep the weather and show no air quality.
             val airBody = runCatching { api.airQualityJson(place.lat, place.lon) }.getOrNull()
             val air = airBody?.let { runCatching { AirQualityJson.parse(it) }.getOrNull() }
             val weather = CachedWeather(forecast, place, now, air)
-            store.save(place, now, body, airBody.takeIf { air != null })
+            store.save(place, now, body, airBody.takeIf { air != null }, temporary)
             WeatherRefreshResult.Success(weather)
         } catch (e: IOException) {
             WeatherRefreshResult.Failure(FailureReason.NETWORK, cached)
@@ -128,12 +152,11 @@ internal class DefaultWeatherRepository(
     }
 
     /**
-     * The same place the rain forecast uses: a temporary place, a fixed chosen place, or else wherever the last rain
+     * The same place the default rain forecast uses: a fixed chosen place, or else wherever the last rain
      * forecast was for (the phone's location, named by the rain side), or else the chosen place.
      */
     private suspend fun resolvePlace(): Place? {
         val settings = places.settings.first()
-        settings.activeTemporary(clock.instant())?.let { return it }
         if (!settings.useCurrentLocation) settings.chosenPlace?.let { return it }
         return rain.latest()?.place ?: settings.chosenPlace
     }
