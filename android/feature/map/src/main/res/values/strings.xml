@@ -14,4 +14,24 @@
     <string name="map_graph_description">Regen de komende 2 uur op jouw plek</string>
     <string name="map_preview_title">Radar</string>
     <string name="map_preview_open">Open de radarkaart</string>
+    <string name="map_point_close">Sluiten</string>
+    <string name="map_point_rain_loading">Regen ophalen…</string>
+    <string name="map_point_outside">Deze plek ligt buiten het bereik van de Nederlandse radar.</string>
+    <string name="map_point_rain_failed">De regen is hier nu niet op te halen.</string>
+    <string name="map_point_graph">Regen de komende 2 uur op deze plek</string>
+    <string name="map_point_rain_chance">%1$d%% kans op neerslag</string>
+    <string name="map_point_wind">Wind %1$s</string>
+    <string name="map_point_save">Bewaar plek</string>
+    <string name="map_point_saved_label">Bewaard</string>
+    <string name="map_point_use">Volledige verwachting</string>
+    <string name="map_point_choose">Kies deze plek</string>
+    <string name="map_point_saved">%1$s bewaard</string>
+    <string name="map_pick_title">Kies een plek</string>
+    <string name="map_pick_hint">Sleep de kaart of houd ergens lang ingedrukt</string>
+    <string name="map_save_title">Plek bewaren</string>
+    <string name="map_save_name">Naam, bijvoorbeeld Thuis of Werk</string>
+    <string name="map_save_default">Maak dit mijn standaardplek</string>
+    <string name="map_save_default_detail">De app laat dan altijd deze plek zien, in plaats van je huidige locatie</string>
+    <string name="map_save_confirm">Bewaar</string>
+    <string name="map_save_cancel">Annuleren</string>
 </resources>

@@ -19,7 +19,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -85,6 +87,8 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     onOpenSettings: (() -> Unit)? = null,
     onOpenMap: (() -> Unit)? = null,
+    /** Opens the radar map to pick a place; shown as "Kies op de kaart" in the place sheet. */
+    onPickOnMap: (() -> Unit)? = null,
     viewModel: HomeViewModel = viewModel(),
     /** Also run on pull to refresh, for whatever [bottomContent] shows. */
     onRefreshMore: () -> Unit = {},
@@ -130,6 +134,7 @@ fun HomeScreen(
             if (!hasPermission) permissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
         },
         onChooseFavorite = viewModel::choose,
+        onReturnToDefault = viewModel::returnToDefault,
         modifier = modifier,
         bottomContent = bottomContent,
         radarContent = radarContent,
@@ -156,6 +161,12 @@ fun HomeScreen(
                 viewModel.saveFavorite(place, name, choose)
             },
             onRemoveFavorite = viewModel::removeFavorite,
+            onPickOnMap = onPickOnMap?.let { pick ->
+                {
+                    showPlaces = false
+                    pick()
+                }
+            },
             onDismiss = { showPlaces = false },
         )
     }
@@ -173,6 +184,7 @@ internal fun HomeContent(
     onOpenMap: (() -> Unit)? = null,
     onUseCurrentLocation: () -> Unit = {},
     onChooseFavorite: (Place) -> Unit = {},
+    onReturnToDefault: () -> Unit = {},
     modifier: Modifier = Modifier,
     zone: ZoneId = ZoneId.systemDefault(),
     bottomContent: @Composable () -> Unit = {},
@@ -194,6 +206,9 @@ internal fun HomeContent(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Header(state, onChoosePlace, onOpenSettings, onOpenMap)
+                state.temporaryPlace?.let { place ->
+                    TemporaryPlaceBar(place, state.settings, zone, onReturnToDefault)
+                }
                 if (state.favorites.isNotEmpty()) {
                     FavoriteChips(state, onUseCurrentLocation, onChooseFavorite)
                 }
@@ -247,8 +262,10 @@ private fun Header(
             modifier = Modifier.weight(1f),
         )
         val place = state.forecast?.place
-        val following = state.settings.useCurrentLocation
+        val temporary = state.temporaryPlace
+        val following = state.settings.useCurrentLocation && temporary == null
         val label = when {
+            temporary != null -> temporary.shortName()
             !following -> state.settings.chosenPlace?.shortName() ?: stringResource(R.string.home_choose_place)
             place != null -> place.shortName()
             else -> stringResource(R.string.places_current)
@@ -266,6 +283,18 @@ private fun Header(
             trailingIcon = {
                 Icon(painterResource(R.drawable.ic_expand), contentDescription = null, modifier = Modifier.size(18.dp))
             },
+            // A temporary place stands out, so it is clear this is not the usual place.
+            colors = if (temporary != null) {
+                AssistChipDefaults.assistChipColors(
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    labelColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                    leadingIconContentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                    trailingIconContentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                )
+            } else {
+                AssistChipDefaults.assistChipColors()
+            },
+            border = if (temporary != null) null else AssistChipDefaults.assistChipBorder(enabled = true),
         )
         if (onOpenMap != null) {
             IconButton(onClick = onOpenMap) {
@@ -283,7 +312,8 @@ private fun Header(
 /** Quick switch between "Hier" and the saved places, one tap each. */
 @Composable
 private fun FavoriteChips(state: HomeUiState, onUseCurrentLocation: () -> Unit, onChoose: (Place) -> Unit) {
-    val chosen = state.settings.chosenPlace?.takeIf { !state.settings.useCurrentLocation }
+    val temporary = state.temporaryPlace
+    val chosen = temporary ?: state.settings.chosenPlace?.takeIf { !state.settings.useCurrentLocation }
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier
@@ -291,7 +321,7 @@ private fun FavoriteChips(state: HomeUiState, onUseCurrentLocation: () -> Unit, 
             .horizontalScroll(rememberScrollState()),
     ) {
         FilterChip(
-            selected = state.settings.useCurrentLocation,
+            selected = state.settings.useCurrentLocation && temporary == null,
             onClick = onUseCurrentLocation,
             label = { Text(stringResource(R.string.places_here)) },
             leadingIcon = {
@@ -307,6 +337,56 @@ private fun FavoriteChips(state: HomeUiState, onUseCurrentLocation: () -> Unit, 
                     Icon(painterResource(R.drawable.ic_star), contentDescription = null, modifier = Modifier.size(18.dp))
                 },
             )
+        }
+    }
+}
+
+/**
+ * Says that a place picked on the map is showing for now, until when, and how to go back to the
+ * usual place (the phone's location, or the chosen place).
+ */
+@Composable
+private fun TemporaryPlaceBar(place: Place, settings: LocationSettings, zone: ZoneId, onReturnToDefault: () -> Unit) {
+    val defaultName = if (settings.useCurrentLocation) {
+        stringResource(R.string.places_here)
+    } else {
+        settings.chosenPlace?.shortName() ?: stringResource(R.string.places_here)
+    }
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+        ),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(start = 16.dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
+        ) {
+            Icon(painterResource(R.drawable.ic_map), contentDescription = null, modifier = Modifier.size(22.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.home_temporary_title, place.shortName()),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                settings.temporaryUntil?.let { until ->
+                    Text(
+                        stringResource(R.string.home_temporary_until, clock.format(until.atZone(zone))),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+            Button(
+                onClick = onReturnToDefault,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.tertiary,
+                    contentColor = MaterialTheme.colorScheme.onTertiary,
+                ),
+                contentPadding = PaddingValues(horizontal = 14.dp),
+            ) {
+                Text(stringResource(R.string.home_temporary_back, defaultName), maxLines = 1)
+            }
         }
     }
 }

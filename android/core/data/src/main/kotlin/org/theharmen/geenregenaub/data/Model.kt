@@ -54,4 +54,16 @@ data class LocationSettings(
     val useCurrentLocation: Boolean = true,
     /** Fallback (and the fixed place when [useCurrentLocation] is off). */
     val chosenPlace: Place? = null,
-)
+    /**
+     * A place picked for a short while, e.g. on the radar map. It wins over the default above
+     * until [temporaryUntil]; after that the default is back by itself.
+     */
+    val temporaryPlace: Place? = null,
+    val temporaryUntil: Instant? = null,
+) {
+    /** The temporary place while it lasts, else null. */
+    fun activeTemporary(now: Instant): Place? {
+        val until = temporaryUntil ?: return null
+        return temporaryPlace?.takeIf { now.isBefore(until) }
+    }
+}

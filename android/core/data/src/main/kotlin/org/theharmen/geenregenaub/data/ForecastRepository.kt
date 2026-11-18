@@ -1,6 +1,7 @@
 package org.theharmen.geenregenaub.data
 
 import kotlinx.coroutines.flow.Flow
+import java.time.Duration
 
 /**
  * The one shared source of rain forecasts for the home screen, the widget and the background job.
@@ -18,6 +19,12 @@ interface ForecastRepository {
      * else the chosen place), fetches the forecast from the relay and stores it in the cache.
      */
     suspend fun refresh(): RefreshResult
+
+    /**
+     * The rain at any [place], e.g. a point held on the radar map. Leaves the cache and the
+     * location settings alone; a failure carries no cached forecast.
+     */
+    suspend fun forecastFor(place: Place): RefreshResult
 }
 
 /** The user's location choice and place search. Get it with [GeenRegenData.placeRepository]. */
@@ -33,6 +40,18 @@ interface PlaceRepository {
     /** Follow the phone's location again (the chosen place stays as fallback). */
     suspend fun useCurrentLocation()
 
+    /**
+     * Shows the forecast for [place] for a while (an hour by default) without changing the
+     * default; after that, or after [clearTemporary], the default place is back.
+     */
+    suspend fun chooseTemporarily(place: Place, duration: Duration = TEMPORARY_DURATION)
+
+    /** Back to the default place straight away. */
+    suspend fun clearTemporary()
+
+    /** The town at this point, e.g. "Leusden", or null when unknown, abroad or offline. */
+    suspend fun nameAt(lat: Double, lon: Double): String?
+
     /** The user's saved places ("Thuis", "Werk", …), in the order they were added. */
     val favorites: Flow<List<Place>>
 
@@ -44,6 +63,11 @@ interface PlaceRepository {
 
     /** Forgets the saved place at the same spot as [place]. */
     suspend fun removeFavorite(place: Place)
+
+    companion object {
+        /** How long a place picked on the map stays before the default comes back. */
+        val TEMPORARY_DURATION: Duration = Duration.ofHours(1)
+    }
 }
 
 /** True when both are the same point on the map, whatever they are called. */

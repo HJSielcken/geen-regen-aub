@@ -28,6 +28,7 @@ class MainActivity : ComponentActivity() {
                     onRefreshMore = weather::refresh,
                     bottomContent = { WeatherSections(viewModel = weather) },
                     onOpenMap = { startActivity(RadarMapActivity.intent(this)) },
+                    onPickOnMap = { startActivity(RadarMapActivity.intent(this, pickPlace = true)) },
                     radarContent = { RadarPreview(onOpen = { startActivity(RadarMapActivity.intent(this)) }) },
                 )
             }

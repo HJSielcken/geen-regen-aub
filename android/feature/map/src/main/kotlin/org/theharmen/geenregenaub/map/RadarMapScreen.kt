@@ -1,6 +1,7 @@
 package org.theharmen.geenregenaub.map
 
 import android.os.Bundle
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,6 +22,8 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -28,6 +31,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,7 +61,10 @@ import org.maplibre.android.style.layers.RasterLayer
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.android.style.sources.ImageSource
+import org.maplibre.geojson.Feature
+import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.Point
+import org.theharmen.geenregenaub.data.isSameSpot
 import org.theharmen.geenregenaub.data.radar.RadarBounds
 import org.theharmen.geenregenaub.domain.RainForecast
 import org.theharmen.geenregenaub.domain.remainingAt
@@ -73,40 +80,129 @@ private const val RADAR_SOURCE = "radar"
 private const val RADAR_LAYER = "radar-layer"
 private const val PIN_SOURCE = "pin"
 private const val PIN_LAYER = "pin-layer"
+private const val POINT_SOURCE = "point"
+private const val POINT_LAYER = "point-layer"
 
-/** Animated radar: the past hour as measured, then the 2-hour forecast, over a map of the Netherlands. */
+/**
+ * Animated radar: the past hour as measured, then the 2-hour forecast, over a map of the Netherlands.
+ * Holding a point shows the rain and weather there, to save it or show it on the home screen.
+ *
+ * With [pickPlace] the map is a place picker: a pin stays in the middle while the map moves
+ * under it, and [onPlaceChosen] runs once the user picks the point.
+ */
 @Composable
-fun RadarMapScreen(onBack: () -> Unit, viewModel: RadarMapViewModel = viewModel()) {
+fun RadarMapScreen(
+    onBack: () -> Unit,
+    pickPlace: Boolean = false,
+    onPlaceChosen: () -> Unit = onBack,
+    viewModel: RadarMapViewModel = viewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val dark = isAppInDarkTheme()
+    val point = state.point
+    var naming by remember { mutableStateOf(false) }
+    val snackbar = remember { SnackbarHostState() }
+    val savedText = state.savedName?.let { stringResource(R.string.map_point_saved, it) }
+
+    LaunchedEffect(savedText) {
+        if (savedText != null) {
+            snackbar.showSnackbar(savedText)
+            viewModel.savedShown()
+        }
+    }
+
+    // Back first closes the point's card; picking, back leaves straight away.
+    BackHandler(enabled = point != null && !pickPlace) { viewModel.dismissPoint() }
 
     Box(Modifier.fillMaxSize()) {
-        RadarMap(state, dark, Modifier.fillMaxSize())
+        RadarMap(
+            state = state,
+            dark = dark,
+            modifier = Modifier.fillMaxSize(),
+            pointPin = if (pickPlace) null else point,
+            onLongPress = viewModel::inspect,
+            onCameraIdle = if (pickPlace) viewModel::inspect else null,
+            followLongPress = pickPlace,
+        )
 
-        FilledTonalIconButton(
-            onClick = onBack,
-            modifier = Modifier
-                .statusBarsPadding()
-                .padding(12.dp),
-        ) {
-            Icon(painterResource(R.drawable.ic_back), contentDescription = stringResource(R.string.map_back))
+        if (pickPlace) {
+            CenterPin(Modifier.align(Alignment.Center))
+            PickHeader(
+                onBack = onBack,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(12.dp),
+            )
+        } else {
+            FilledTonalIconButton(
+                onClick = onBack,
+                modifier = Modifier
+                    .statusBarsPadding()
+                    .padding(12.dp),
+            ) {
+                Icon(painterResource(R.drawable.ic_back), contentDescription = stringResource(R.string.map_back))
+            }
         }
 
-        Controls(
-            state = state,
-            onSelectTime = viewModel::selectTime,
-            onRetry = viewModel::load,
-            modifier = Modifier
+        Column(
+            Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
                 .padding(12.dp),
+        ) {
+            SnackbarHost(snackbar)
+            if (point != null) {
+                PointCard(
+                    point = point,
+                    saved = state.favorites.any { it.isSameSpot(point.place) },
+                    picking = pickPlace,
+                    onClose = viewModel::dismissPoint,
+                    onSave = { naming = true },
+                    onUse = { viewModel.useTemporarily(onPlaceChosen) },
+                )
+            } else if (!pickPlace) {
+                Controls(
+                    state = state,
+                    onSelectTime = viewModel::selectTime,
+                    onRetry = viewModel::load,
+                    modifier = Modifier,
+                )
+            }
+        }
+    }
+
+    if (naming && point != null) {
+        SavePointDialog(
+            initial = point.name ?: "",
+            onConfirm = { name, makeDefault ->
+                naming = false
+                viewModel.save(name, makeDefault)
+            },
+            onDismiss = { naming = false },
         )
     }
 }
 
 @Composable
-internal fun RadarMap(state: RadarMapState, dark: Boolean, modifier: Modifier, interactive: Boolean = true) {
+internal fun RadarMap(
+    state: RadarMapState,
+    dark: Boolean,
+    modifier: Modifier,
+    interactive: Boolean = true,
+    /** The held point to mark, if any. */
+    pointPin: MapPoint? = null,
+    /** A long press on the map, with its latitude and longitude. */
+    onLongPress: ((Double, Double) -> Unit)? = null,
+    /** The map came to rest; called with the centre's latitude and longitude. */
+    onCameraIdle: ((Double, Double) -> Unit)? = null,
+    /** Move the map to a long-pressed point (for the centre pin while picking). */
+    followLongPress: Boolean = false,
+) {
     val context = LocalContext.current
+    val longPress by rememberUpdatedState(onLongPress)
+    val cameraIdle by rememberUpdatedState(onCameraIdle)
+    val follow by rememberUpdatedState(followLongPress)
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     var style by remember { mutableStateOf<Style?>(null) }
     val mapView = remember {
@@ -143,6 +239,15 @@ internal fun RadarMap(state: RadarMapState, dark: Boolean, modifier: Modifier, i
             map.setMaxZoomPreference(12.0)
             style = null
             val onLoaded = Style.OnStyleLoaded { loaded ->
+                loaded.addSource(GeoJsonSource(POINT_SOURCE))
+                loaded.addLayer(
+                    CircleLayer(POINT_LAYER, POINT_SOURCE).withProperties(
+                        PropertyFactory.circleRadius(9f),
+                        PropertyFactory.circleColor("#0B1D3A"),
+                        PropertyFactory.circleStrokeColor("#FFFFFF"),
+                        PropertyFactory.circleStrokeWidth(3f),
+                    ),
+                )
                 loaded.addSource(GeoJsonSource(PIN_SOURCE))
                 loaded.addLayer(
                     CircleLayer(PIN_LAYER, PIN_SOURCE).withProperties(
@@ -165,6 +270,25 @@ internal fun RadarMap(state: RadarMapState, dark: Boolean, modifier: Modifier, i
         }
     }
 
+    // Long press and the map coming to rest, wired once; the callbacks may change.
+    LaunchedEffect(mapView) {
+        mapView.getMapAsync { map ->
+            map.addOnMapLongClickListener { latLng ->
+                val callback = longPress ?: return@addOnMapLongClickListener false
+                if (follow) {
+                    map.animateCamera(CameraUpdateFactory.newLatLng(latLng))
+                } else {
+                    callback(latLng.latitude, latLng.longitude)
+                }
+                true
+            }
+            map.addOnCameraIdleListener {
+                val target = map.cameraPosition.target ?: return@addOnCameraIdleListener
+                cameraIdle?.invoke(target.latitude, target.longitude)
+            }
+        }
+    }
+
     // Camera: on the home screen's place once it is known, else the whole country.
     var centred by remember { mutableStateOf(false) }
     val place = state.place
@@ -184,6 +308,16 @@ internal fun RadarMap(state: RadarMapState, dark: Boolean, modifier: Modifier, i
     LaunchedEffect(style, place) {
         val source = style?.getSourceAs<GeoJsonSource>(PIN_SOURCE) ?: return@LaunchedEffect
         if (place != null) source.setGeoJson(Point.fromLngLat(place.lon, place.lat))
+    }
+
+    // The held point's marker.
+    LaunchedEffect(style, pointPin?.lat, pointPin?.lon) {
+        val source = style?.getSourceAs<GeoJsonSource>(POINT_SOURCE) ?: return@LaunchedEffect
+        if (pointPin != null) {
+            source.setGeoJson(Point.fromLngLat(pointPin.lon, pointPin.lat))
+        } else {
+            source.setGeoJson(FeatureCollection.fromFeatures(emptyList<Feature>()))
+        }
     }
 
     // Radar picture: add the layer once frames are known, then swap the picture per frame.
