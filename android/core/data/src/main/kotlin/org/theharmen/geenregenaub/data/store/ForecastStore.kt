@@ -26,6 +26,10 @@ internal class ForecastStore(context: Context) {
         .map { prefs -> prefs[FORECAST]?.let(StoredJson::decodeForecast) }
         .distinctUntilChanged()
 
+    val temporaryForecast: Flow<CachedForecast?> = dataStore.data
+        .map { prefs -> prefs[TEMPORARY_FORECAST]?.let(StoredJson::decodeForecast) }
+        .distinctUntilChanged()
+
     val locationSettings: Flow<LocationSettings> = dataStore.data
         .map { prefs ->
             LocationSettings(
@@ -55,6 +59,10 @@ internal class ForecastStore(context: Context) {
 
     suspend fun saveForecast(forecast: CachedForecast) {
         dataStore.edit { it[FORECAST] = StoredJson.encodeForecast(forecast) }
+    }
+
+    suspend fun saveTemporaryForecast(forecast: CachedForecast) {
+        dataStore.edit { it[TEMPORARY_FORECAST] = StoredJson.encodeForecast(forecast) }
     }
 
     suspend fun saveLastCurrentLocation(place: Place) {
@@ -95,6 +103,7 @@ internal class ForecastStore(context: Context) {
         val LAST_CURRENT = stringPreferencesKey("last_current_location_v1")
         val FAVORITES = stringPreferencesKey("favorite_places_v1")
         val TEMPORARY_PLACE = stringPreferencesKey("temporary_place_v1")
+        val TEMPORARY_FORECAST = stringPreferencesKey("temporary_forecast_v1")
         val TEMPORARY_UNTIL = longPreferencesKey("temporary_place_until")
     }
 }

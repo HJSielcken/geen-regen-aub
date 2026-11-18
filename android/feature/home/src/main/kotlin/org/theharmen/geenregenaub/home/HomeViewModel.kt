@@ -66,11 +66,13 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     val state: StateFlow<HomeUiState> = combine(
         clock,
-        forecasts.cachedForecast,
+        combine(forecasts.cachedForecast, forecasts.temporaryForecast, ::Pair),
         places.settings,
         combine(refreshing, userRefreshing, failure, loaded) { r, u, f, l -> RefreshState(r, u, f, l) },
         places.favorites,
-    ) { now, forecast, settings, refresh, favorites ->
+    ) { now, (default, temporary), settings, refresh, favorites ->
+        // A temporary place has its own cache, so the widgets keep showing the default place.
+        val forecast = settings.shown(now, default, temporary) { it.place }
         HomeUiState(
             now = now,
             forecast = forecast,
@@ -116,7 +118,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         refreshJob = viewModelScope.launch {
             refreshing.value = true
             try {
-                val result = forecasts.refresh()
+                val result = forecasts.refreshShown()
                 failure.value = (result as? RefreshResult.Failure)?.reason
                 loaded.value = true
             } finally {

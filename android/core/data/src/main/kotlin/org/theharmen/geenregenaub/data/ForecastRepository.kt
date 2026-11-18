@@ -8,8 +8,17 @@ import java.time.Duration
  * Get it with [GeenRegenData.forecastRepository].
  */
 interface ForecastRepository {
-    /** The cached forecast, updated after every successful [refresh]. Never hits the network. */
+    /**
+     * The cached forecast for the default place, updated after every successful [refresh]. Never
+     * hits the network. The widgets and rain alerts use this one.
+     */
     val cachedForecast: Flow<CachedForecast?>
+
+    /**
+     * The last forecast for a temporary place, kept apart so the widgets stay on the default.
+     * May be for an older temporary place: pick with [LocationSettings.shown].
+     */
+    val temporaryForecast: Flow<CachedForecast?>
 
     /** The cached forecast right now, or null before the first successful fetch. Offline-safe. */
     suspend fun latest(): CachedForecast?
@@ -19,6 +28,9 @@ interface ForecastRepository {
      * else the chosen place), fetches the forecast from the relay and stores it in the cache.
      */
     suspend fun refresh(): RefreshResult
+
+    /** Like [refresh], but for the place the app shows now: a temporary place while it lasts. */
+    suspend fun refreshShown(): RefreshResult
 
     /**
      * The rain at any [place], e.g. a point held on the radar map. Leaves the cache and the

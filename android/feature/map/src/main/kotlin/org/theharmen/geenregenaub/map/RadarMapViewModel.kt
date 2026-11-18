@@ -14,6 +14,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -100,7 +101,9 @@ class RadarMapViewModel(application: Application) : AndroidViewModel(application
 
     init {
         viewModelScope.launch {
-            forecasts.cachedForecast.collect { cached ->
+            combine(forecasts.cachedForecast, forecasts.temporaryForecast, places.settings) { default, temporary, settings ->
+                settings.shown(Instant.now(), default, temporary) { it.place }
+            }.collect { cached ->
                 _state.update { it.copy(place = cached?.place, forecast = cached) }
             }
         }

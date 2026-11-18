@@ -27,9 +27,14 @@ internal class WeatherStore(context: Context) {
         .map { prefs -> prefs[KEY]?.let(::decode) }
         .distinctUntilChanged()
 
-    suspend fun save(place: Place, fetchedAt: Instant, body: String, airBody: String? = null) {
+    /** The weather for a temporary place, kept apart so the widgets stay on the default. */
+    val temporary: Flow<CachedWeather?> = dataStore.data
+        .map { prefs -> prefs[TEMPORARY_KEY]?.let(::decode) }
+        .distinctUntilChanged()
+
+    suspend fun save(place: Place, fetchedAt: Instant, body: String, airBody: String? = null, temporary: Boolean = false) {
         val stored = Stored(place.name, place.lat, place.lon, place.isCurrentLocation, fetchedAt.toEpochMilli(), body, airBody)
-        dataStore.edit { it[KEY] = json.encodeToString(Stored.serializer(), stored) }
+        dataStore.edit { it[if (temporary) TEMPORARY_KEY else KEY] = json.encodeToString(Stored.serializer(), stored) }
     }
 
     @Serializable
@@ -46,6 +51,7 @@ internal class WeatherStore(context: Context) {
 
     private companion object {
         val KEY = stringPreferencesKey("weather_v1")
+        val TEMPORARY_KEY = stringPreferencesKey("weather_temporary_v1")
         val json = Json { ignoreUnknownKeys = true }
 
         fun decode(value: String): CachedWeather? = runCatching {
