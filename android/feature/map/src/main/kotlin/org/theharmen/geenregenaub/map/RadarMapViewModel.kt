@@ -21,11 +21,18 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.theharmen.geenregenaub.data.CachedForecast
+import org.theharmen.geenregenaub.data.FailureReason
 import org.theharmen.geenregenaub.data.GeenRegenData
 import org.theharmen.geenregenaub.data.Place
+import org.theharmen.geenregenaub.data.RefreshResult
 import org.theharmen.geenregenaub.data.radar.RadarFrames
+import org.theharmen.geenregenaub.data.weather.WeatherData
+import org.theharmen.geenregenaub.domain.RainForecast
+import org.theharmen.geenregenaub.domain.WeatherForecast
 import java.time.Duration
 import java.time.Instant
+import java.util.Locale
+import kotlin.math.abs
 
 data class RadarMapState(
     val frames: RadarFrames? = null,
@@ -40,13 +47,48 @@ data class RadarMapState(
     val place: Place? = null,
     /** The home screen's 2-hour forecast, shown as a graph under the map. */
     val forecast: CachedForecast? = null,
+    /** The point held on the map (or under the centre pin while picking), with its rain and weather. */
+    val point: MapPoint? = null,
+    val favorites: List<Place> = emptyList(),
+    /** Name of a place that was just saved, for a short confirmation; null when there is none. */
+    val savedName: String? = null,
 ) {
     val isReady: Boolean get() = frames != null && images.isNotEmpty()
+}
+
+/** Any point on the map, looked up on its own: the town name, the rain and the weather there. */
+data class MapPoint(
+    val lat: Double,
+    val lon: Double,
+    /** The town, once known; null while looking it up, or abroad. */
+    val name: String? = null,
+    val nameLoading: Boolean = true,
+    val rain: RainForecast? = null,
+    val rainFailure: FailureReason? = null,
+    val rainLoading: Boolean = true,
+    val weather: WeatherForecast? = null,
+    val weatherLoading: Boolean = true,
+) {
+    /** The point as a place to save or use: named after its town, else its coordinates. */
+    val place: Place get() = Place(name ?: coordinates(lat, lon), lat, lon, isCurrentLocation = false)
+
+    companion object {
+        /** "52,13° N 5,43° O". */
+        fun coordinates(lat: Double, lon: Double): String {
+            val nl = Locale.forLanguageTag("nl-NL")
+            val ns = if (lat >= 0) "N" else "Z"
+            val eo = if (lon >= 0) "O" else "W"
+            return String.format(nl, "%.2f° %s %.2f° %s", kotlin.math.abs(lat), ns, kotlin.math.abs(lon), eo)
+        }
+    }
 }
 
 class RadarMapViewModel(application: Application) : AndroidViewModel(application) {
     private val radar = GeenRegenData.radarRepository
     private val forecasts = GeenRegenData.forecastRepository(application)
+    private val places = GeenRegenData.placeRepository(application)
+    private val weather = WeatherData.repository(application)
+    private var pointJob: Job? = null
 
     private val _state = MutableStateFlow(RadarMapState())
     val state: StateFlow<RadarMapState> = _state.asStateFlow()
@@ -61,6 +103,9 @@ class RadarMapViewModel(application: Application) : AndroidViewModel(application
             forecasts.cachedForecast.collect { cached ->
                 _state.update { it.copy(place = cached?.place, forecast = cached) }
             }
+        }
+        viewModelScope.launch {
+            places.favorites.collect { favorites -> _state.update { it.copy(favorites = favorites) } }
         }
         load()
     }
@@ -123,6 +168,77 @@ class RadarMapViewModel(application: Application) : AndroidViewModel(application
             delay(RESUME_AFTER_MS)
             resume()
         }
+    }
+
+    /**
+     * Looks up the point at [lat], [lon]: its town, rain and weather, each shown as it comes in.
+     * A new point cancels the lookups for the previous one.
+     */
+    fun inspect(lat: Double, lon: Double) {
+        val current = _state.value.point
+        if (current != null && abs(current.lat - lat) < 1e-5 && abs(current.lon - lon) < 1e-5) return
+        pointJob?.cancel()
+        _state.update { it.copy(point = MapPoint(lat, lon)) }
+        pointJob = viewModelScope.launch {
+            launch {
+                val name = places.nameAt(lat, lon)
+                updatePoint(lat, lon) { it.copy(name = name, nameLoading = false) }
+            }
+            launch {
+                val spot = Place(MapPoint.coordinates(lat, lon), lat, lon, isCurrentLocation = false)
+                when (val result = forecasts.forecastFor(spot)) {
+                    is RefreshResult.Success -> updatePoint(lat, lon) {
+                        it.copy(rain = result.forecast.forecast, rainLoading = false)
+                    }
+                    is RefreshResult.Failure -> updatePoint(lat, lon) {
+                        it.copy(rainFailure = result.reason, rainLoading = false)
+                    }
+                }
+            }
+            launch {
+                val spot = Place(MapPoint.coordinates(lat, lon), lat, lon, isCurrentLocation = false)
+                val forecast = weather.forecastFor(spot)
+                updatePoint(lat, lon) { it.copy(weather = forecast, weatherLoading = false) }
+            }
+        }
+    }
+
+    /** Applies [change] only while the point at [lat], [lon] is still the one on screen. */
+    private fun updatePoint(lat: Double, lon: Double, change: (MapPoint) -> MapPoint) {
+        _state.update { s ->
+            val point = s.point
+            if (point != null && point.lat == lat && point.lon == lon) s.copy(point = change(point)) else s
+        }
+    }
+
+    fun dismissPoint() {
+        pointJob?.cancel()
+        _state.update { it.copy(point = null) }
+    }
+
+    /** Shows the point on the home screen for a while, without changing the default; then [done]. */
+    fun useTemporarily(done: () -> Unit) {
+        val point = _state.value.point ?: return
+        viewModelScope.launch {
+            places.chooseTemporarily(point.place)
+            done()
+        }
+    }
+
+    /** Saves the point as [name]; [makeDefault] also makes it the place the app always shows. */
+    fun save(name: String, makeDefault: Boolean) {
+        val point = _state.value.point ?: return
+        val place = point.place
+        val savedName = name.trim().ifEmpty { place.name }
+        viewModelScope.launch {
+            places.saveFavorite(place, savedName)
+            if (makeDefault) places.choose(place.copy(name = savedName))
+            _state.update { it.copy(savedName = savedName) }
+        }
+    }
+
+    fun savedShown() {
+        _state.update { it.copy(savedName = null) }
     }
 
     /** Starts the animation once, when the first picture is in. */

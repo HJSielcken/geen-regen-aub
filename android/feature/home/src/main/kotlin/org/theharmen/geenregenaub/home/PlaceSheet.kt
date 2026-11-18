@@ -60,6 +60,8 @@ internal fun PlaceSheet(
     onSaveFavorite: (place: Place, name: String, choose: Boolean) -> Unit,
     onRemoveFavorite: (Place) -> Unit,
     onDismiss: () -> Unit,
+    /** Opens the radar map to pick a point; null hides the option. */
+    onPickOnMap: (() -> Unit)? = null,
 ) {
     var naming by remember { mutableStateOf<NameRequest?>(null) }
     val chosen = settings.chosenPlace?.takeIf { !settings.useCurrentLocation }
@@ -85,6 +87,22 @@ internal fun PlaceSheet(
                 colors = selectedColors(settings.useCurrentLocation),
                 modifier = Modifier.clickable(onClick = onUseCurrentLocation),
             )
+            if (onPickOnMap != null) {
+                ListItem(
+                    headlineContent = {
+                        Text(stringResource(R.string.places_pick_on_map), color = MaterialTheme.colorScheme.primary)
+                    },
+                    supportingContent = { Text(stringResource(R.string.places_pick_on_map_detail)) },
+                    leadingContent = {
+                        Icon(
+                            painterResource(R.drawable.ic_map),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    },
+                    modifier = Modifier.clickable(onClick = onPickOnMap),
+                )
+            }
 
             if (favorites.isNotEmpty()) {
                 SectionTitle(stringResource(R.string.places_saved))

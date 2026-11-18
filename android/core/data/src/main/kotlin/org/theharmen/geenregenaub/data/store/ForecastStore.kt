@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.map
 import org.theharmen.geenregenaub.data.CachedForecast
 import org.theharmen.geenregenaub.data.LocationSettings
 import org.theharmen.geenregenaub.data.Place
+import java.time.Instant
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "geenregen")
 
@@ -29,6 +31,8 @@ internal class ForecastStore(context: Context) {
             LocationSettings(
                 useCurrentLocation = prefs[USE_CURRENT] ?: true,
                 chosenPlace = prefs[CHOSEN_PLACE]?.let(StoredJson::decodePlace),
+                temporaryPlace = prefs[TEMPORARY_PLACE]?.let(StoredJson::decodePlace),
+                temporaryUntil = prefs[TEMPORARY_UNTIL]?.let(Instant::ofEpochMilli),
             )
         }
         .distinctUntilChanged()
@@ -57,11 +61,30 @@ internal class ForecastStore(context: Context) {
         dataStore.edit { it[LAST_CURRENT] = StoredJson.encodePlace(place) }
     }
 
-    /** [chosen] null keeps the current chosen place. */
-    suspend fun saveLocationSettings(useCurrent: Boolean, chosen: Place?) {
+    /** [chosen] null keeps the current chosen place; [clearTemporary] also ends a temporary place. */
+    suspend fun saveLocationSettings(useCurrent: Boolean, chosen: Place?, clearTemporary: Boolean = false) {
         dataStore.edit { prefs ->
             prefs[USE_CURRENT] = useCurrent
             if (chosen != null) prefs[CHOSEN_PLACE] = StoredJson.encodePlace(chosen)
+            if (clearTemporary) {
+                prefs.remove(TEMPORARY_PLACE)
+                prefs.remove(TEMPORARY_UNTIL)
+            }
+        }
+    }
+
+    /** Uses [place] instead of the default until [until]; [until] null keeps the current end time. */
+    suspend fun saveTemporaryPlace(place: Place, until: Instant?) {
+        dataStore.edit { prefs ->
+            prefs[TEMPORARY_PLACE] = StoredJson.encodePlace(place)
+            if (until != null) prefs[TEMPORARY_UNTIL] = until.toEpochMilli()
+        }
+    }
+
+    suspend fun clearTemporaryPlace() {
+        dataStore.edit { prefs ->
+            prefs.remove(TEMPORARY_PLACE)
+            prefs.remove(TEMPORARY_UNTIL)
         }
     }
 
@@ -71,5 +94,7 @@ internal class ForecastStore(context: Context) {
         val CHOSEN_PLACE = stringPreferencesKey("chosen_place_v1")
         val LAST_CURRENT = stringPreferencesKey("last_current_location_v1")
         val FAVORITES = stringPreferencesKey("favorite_places_v1")
+        val TEMPORARY_PLACE = stringPreferencesKey("temporary_place_v1")
+        val TEMPORARY_UNTIL = longPreferencesKey("temporary_place_until")
     }
 }

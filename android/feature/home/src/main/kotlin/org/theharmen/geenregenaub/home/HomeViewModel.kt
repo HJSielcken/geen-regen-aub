@@ -7,6 +7,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
@@ -37,7 +39,10 @@ data class HomeUiState(
     val failure: FailureReason? = null,
     val hasLoaded: Boolean = false,
     val favorites: List<Place> = emptyList(),
-)
+) {
+    /** A place picked on the map, shown instead of the default for a while; null when none. */
+    val temporaryPlace: Place? get() = settings.activeTemporary(now)
+}
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
@@ -120,7 +125,17 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /** Refreshes now and then every 5 minutes, for as long as the caller's coroutine runs. */
-    suspend fun keepFresh() {
+    suspend fun keepFresh(): Unit = coroutineScope {
+        // A temporary place that starts or runs out: fetch for the new place right away.
+        launch {
+            combine(clock, places.settings) { now, settings -> settings.activeTemporary(now) }
+                .distinctUntilChanged()
+                .drop(1)
+                .collect {
+                    refreshJob?.join()
+                    refresh()
+                }
+        }
         while (true) {
             refresh(byUser = false)
             delay(AUTO_REFRESH_MS)
@@ -135,6 +150,15 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             places.choose(place)
             query.value = ""
+            refreshJob?.join()
+            refresh()
+        }
+    }
+
+    /** Ends a temporary place: back to the phone's location or the chosen default place. */
+    fun returnToDefault() {
+        viewModelScope.launch {
+            places.clearTemporary()
             refreshJob?.join()
             refresh()
         }

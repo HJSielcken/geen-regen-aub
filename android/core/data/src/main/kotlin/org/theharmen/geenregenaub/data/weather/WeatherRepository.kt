@@ -56,6 +56,9 @@ interface WeatherRepository {
      */
     suspend fun refresh(maxAge: Duration = DEFAULT_MAX_AGE): WeatherRefreshResult
 
+    /** The weather at any [place], e.g. a point held on the radar map; not cached. Null on failure. */
+    suspend fun forecastFor(place: Place): WeatherForecast?
+
     companion object {
         val DEFAULT_MAX_AGE: Duration = Duration.ofMinutes(30)
     }
@@ -114,12 +117,23 @@ internal class DefaultWeatherRepository(
         }
     }
 
+    override suspend fun forecastFor(place: Place): WeatherForecast? = try {
+        OpenMeteoJson.parse(api.forecastJson(place.lat, place.lon))
+    } catch (e: IOException) {
+        null
+    } catch (e: SerializationException) {
+        null
+    } catch (e: IllegalArgumentException) {
+        null
+    }
+
     /**
-     * The same place the rain forecast uses: a fixed chosen place, or else wherever the last rain
+     * The same place the rain forecast uses: a temporary place, a fixed chosen place, or else wherever the last rain
      * forecast was for (the phone's location, named by the rain side), or else the chosen place.
      */
     private suspend fun resolvePlace(): Place? {
         val settings = places.settings.first()
+        settings.activeTemporary(clock.instant())?.let { return it }
         if (!settings.useCurrentLocation) settings.chosenPlace?.let { return it }
         return rain.latest()?.place ?: settings.chosenPlace
     }

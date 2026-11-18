@@ -33,6 +33,7 @@ internal class DefaultForecastRepository(
 
     override suspend fun refresh(): RefreshResult = mutex.withLock {
         val settings = store.locationSettings.first()
+        settings.activeTemporary(clock.instant())?.let { return fetch(it) }
         if (!settings.useCurrentLocation) {
             val chosen = settings.chosenPlace ?: return RefreshResult.Failure(FailureReason.NO_LOCATION, latest())
             return fetch(chosen)
@@ -61,6 +62,24 @@ internal class DefaultForecastRepository(
                 else -> fetchHere(here.first, here.second)
             }
         }
+    }
+
+    override suspend fun forecastFor(place: Place): RefreshResult = try {
+        val response = api.rain(place.lat, place.lon)
+        RefreshResult.Success(
+            CachedForecast(
+                forecast = response.forecast,
+                place = place,
+                fetchedAt = clock.instant(),
+                stale = response.stale,
+                attribution = response.attribution,
+                isDemo = isDemo,
+            ),
+        )
+    } catch (e: RainApiException) {
+        RefreshResult.Failure(e.reason, null)
+    } catch (e: IOException) {
+        RefreshResult.Failure(FailureReason.NETWORK, null)
     }
 
     /** Fetches the forecast at the phone's position, looking up the town name at the same time. */
