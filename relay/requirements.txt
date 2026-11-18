@@ -1,7 +1,7 @@
-fastapi>=0.162.0,<1
+fastapi>=0.163.2,<1
 uvicorn[standard]>=0.54.0,<1
 httpx>=0.28.1,<1
 h5py>=3.16.0,<4
-numpy>=2.5.4,<3
+numpy>=2.5.5,<3
 pyproj>=3.8.0,<4
-sentry-sdk[fastapi]>=2.74.0,<3
+sentry-sdk[fastapi]>=2.75.0,<3
