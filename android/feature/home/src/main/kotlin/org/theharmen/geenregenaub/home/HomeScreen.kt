@@ -161,6 +161,7 @@ fun HomeScreen(
                 viewModel.setDefault(place)
                 if (place == null && !hasPermission) permissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
             },
+            onSaveAsDefault = viewModel::saveAsDefault,
             onSaveFavorite = { place, name, show ->
                 if (show) showPlaces = false
                 viewModel.saveFavorite(place, name, show)

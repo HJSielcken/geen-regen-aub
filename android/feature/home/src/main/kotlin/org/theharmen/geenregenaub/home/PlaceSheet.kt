@@ -65,6 +65,8 @@ internal fun PlaceSheet(
     temporary: Place? = null,
     /** Makes a place the default; null makes it the phone's location. */
     onSetDefault: (Place?) -> Unit = {},
+    /** Saves a place that isn't saved yet and makes it the default (its star). */
+    onSaveAsDefault: (Place) -> Unit = {},
     /** Opens the radar map to pick a point; null hides the option. */
     onPickOnMap: (() -> Unit)? = null,
 ) {
@@ -131,7 +133,8 @@ internal fun PlaceSheet(
                         onChoose = onChoose,
                         onSave = { naming = NameRequest(place, isRename = false) },
                         isDefault = isDefault,
-                        onToggleDefault = { onSetDefault(if (isDefault) null else place) },
+                        // Starring a place that isn't saved saves it too, so the default stays in the list.
+                        onToggleDefault = { if (isDefault) onSetDefault(null) else onSaveAsDefault(place) },
                     )
                 }
             }

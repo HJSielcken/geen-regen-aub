@@ -179,6 +179,17 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** Saves a place that isn't saved yet and makes it the default, in one go (the star on it). */
+    fun saveAsDefault(place: Place) {
+        viewModelScope.launch {
+            val saved = place.copy(name = place.shortName(), isCurrentLocation = false)
+            places.saveFavorite(saved, saved.name)
+            places.setDefault(saved)
+            refreshJob?.join()
+            refresh()
+        }
+    }
+
     /** Makes [place] the default (null: the phone's location). */
     fun setDefault(place: Place?) {
         viewModelScope.launch {
